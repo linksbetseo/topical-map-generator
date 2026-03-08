@@ -417,6 +417,11 @@ def set_cached_topical_map(cache_key: str, payload: Dict[str, object]) -> None:
             TOPICAL_MAP_CACHE.popitem(last=False)
 
 
+def compute_map_quality_score(keyword_rows: List[Dict], pillars: List[Dict]) -> float:
+    # Favor richer pillar structure first, then keyword breadth.
+    return (len(pillars) * 10.0) + (min(len(keyword_rows), 500) * 0.2)
+
+
 init_db()
 
 
@@ -593,6 +598,7 @@ async def topical_map(
         )
 
     auto_relaxed = False
+    auto_relax_reason = ""
     used_strict_relevance = strict_relevance
     used_min_volume = min_volume
 
@@ -606,6 +612,7 @@ async def topical_map(
             )
             if keyword_rows:
                 auto_relaxed = True
+                auto_relax_reason = "strict_empty"
                 used_strict_relevance = False
                 used_min_volume = 0
     except HTTPException as exc:
@@ -671,8 +678,38 @@ async def topical_map(
             map_seed = resolved_seed or seed
             nodes, links, pillars = build_topical_map(map_seed, keyword_rows, target_keywords, include_brands)
             auto_relaxed = True
+            auto_relax_reason = "no_pillars"
             used_strict_relevance = False
             used_min_volume = 0
+
+    # Strict mode can occasionally over-prune useful topical context.
+    quality_min_keywords = max(35, min(140, target_keywords // 3))
+    quality_min_pillars = 6 if target_keywords >= 180 else 4
+    should_try_quality_relax = (
+        strict_relevance
+        and not auto_relaxed
+        and (len(keyword_rows) < quality_min_keywords or len(pillars) < quality_min_pillars)
+    )
+    if should_try_quality_relax:
+        fallback_rows, fallback_resolved_seed = await fetch_keywords_from_dataforseo(
+            seed, login, password, target_keywords, False, 0
+        )
+        if fallback_rows:
+            fallback_seed = fallback_resolved_seed or seed
+            fb_nodes, fb_links, fb_pillars = build_topical_map(
+                fallback_seed, fallback_rows, target_keywords, include_brands
+            )
+            current_score = compute_map_quality_score(keyword_rows, pillars)
+            fallback_score = compute_map_quality_score(fallback_rows, fb_pillars)
+            if fallback_score >= (current_score * 1.25):
+                keyword_rows = fallback_rows
+                resolved_seed = fallback_resolved_seed
+                map_seed = fallback_seed
+                nodes, links, pillars = fb_nodes, fb_links, fb_pillars
+                auto_relaxed = True
+                auto_relax_reason = "strict_low_quality"
+                used_strict_relevance = False
+                used_min_volume = 0
 
     consumed_after = consumed_before if (admin_bypass or ip_bypass) else consumed_before + 1
     remaining_attempts = max(0, MAX_FREE_SEARCHES - consumed_after)
@@ -704,6 +741,7 @@ async def topical_map(
         "include_brands": include_brands,
         "keywords_after_filter": len(keyword_rows),
         "auto_relaxed": auto_relaxed,
+        "auto_relax_reason": auto_relax_reason,
         "used_strict_relevance": used_strict_relevance,
         "used_min_volume": used_min_volume,
     }
