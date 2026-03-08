@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Topical Map Admin</title>
+    <style>
+      :root {
+        --bg: #060a14;
+        --panel: #0d1426;
+        --line: #20345f;
+        --text: #dbe7ff;
+        --muted: #8fa3ca;
+        --ok: #70ffad;
+        --warn: #ffb86b;
+        --err: #ff6a95;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Sora, Segoe UI, sans-serif;
+        background: radial-gradient(circle at 0% 0%, #122145 0%, var(--bg) 42%);
+        color: var(--text);
+      }
+      .wrap { max-width: 1320px; margin: 0 auto; padding: 18px; }
+      .head, .panel {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(13, 20, 38, 0.9);
+      }
+      .head { padding: 14px; display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+      .title { margin-right: auto; }
+      .title h1 { margin: 0; font-size: 1.3rem; }
+      .title p { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+      .field { display: grid; gap: 5px; }
+      .field label { color: var(--muted); font-size: 0.82rem; }
+      input, button {
+        border: 1px solid #365594;
+        background: #0a1020;
+        color: var(--text);
+        border-radius: 8px;
+        padding: 9px 10px;
+        font-family: inherit;
+      }
+      button { cursor: pointer; font-weight: 600; }
+      .grid { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+      .panel { padding: 12px; overflow: auto; }
+      .panel h2 { margin: 0 0 10px; font-size: 1rem; }
+      .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+      .stat { border: 1px solid #274174; border-radius: 10px; padding: 8px 10px; min-width: 120px; }
+      .stat b { display: block; font-size: 1rem; }
+      .stat span { color: var(--muted); font-size: 0.78rem; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+      th, td { border-bottom: 1px solid rgba(60, 91, 150, 0.45); text-align: left; padding: 6px 5px; vertical-align: top; }
+      th { color: #9fc2ff; font-weight: 600; white-space: nowrap; }
+      td { color: #dfe8ff; }
+      .status-ok { color: var(--ok); }
+      .status-blocked { color: var(--warn); }
+      .status-err { color: var(--err); }
+      .seed-list { margin: 0; padding-left: 18px; color: #d2ddff; }
+      .seed-list li { margin-bottom: 2px; }
+      .msg { margin-top: 10px; color: var(--muted); font-size: 0.85rem; min-height: 1.2em; }
+      @media (max-width: 1060px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="head">
+        <div class="title">
+          <h1>Admin Dashboard</h1>
+          <p>Podglad: kto, z jakiego IP i jakie frazy sprawdzal.</p>
+        </div>
+        <div class="field">
+          <label for="limit-input">Limit eventow</label>
+          <input id="limit-input" type="number" min="20" max="1000" value="300" />
+        </div>
+        <button id="load-btn" type="button">Odswiez</button>
+        <button id="logout-btn" type="button">Wyloguj</button>
+      </section>
+
+      <div class="stats" id="stats"></div>
+      <div id="msg" class="msg"></div>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>Ostatnie zapytania</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Czas (UTC)</th>
+                <th>IP</th>
+                <th>Fraza</th>
+                <th>Po korekcie</th>
+                <th>Status</th>
+                <th>HTTP</th>
+              </tr>
+            </thead>
+            <tbody id="events-body"></tbody>
+          </table>
+        </article>
+
+        <article class="panel">
+          <h2>Uzytkownicy (cookie)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Client ID</th>
+                <th>IP</th>
+                <th>Zuzyte 24h</th>
+                <th>Frazy</th>
+              </tr>
+            </thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+        </article>
+      </section>
+    </main>
+    <script src="/static/admin.js?v=20260307a"></script>
+  </body>
+</html>

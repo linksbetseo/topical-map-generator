@@ -1,0 +1,76 @@
+﻿<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Topical Map Generator</title>
+    <meta name="description" content="Generuj interaktywne mapy tematyczne SEO na podstawie jednego slowa kluczowego." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260307j" />
+  </head>
+  <body>
+    <div class="bg-glow glow-1"></div>
+    <div class="bg-glow glow-2"></div>
+
+    <main class="app-shell">
+      <section class="hero">
+        <h1>Topical Map Generator</h1>
+        <p>Wpisz seed keyword i wygeneruj mape tematyczna SEO w kilka sekund.</p>
+
+        <form id="search-form" class="search-box-wrap">
+          <div class="search-box">
+            <input id="seed-input" type="text" placeholder="Np. pozycjonowanie stron" required minlength="2" maxlength="100" />
+            <button id="submit-btn" type="submit">Generuj</button>
+          </div>
+          <div class="controls-row">
+            <label class="target-control" for="target-input">
+              Liczba fraz:
+              <input id="target-input" type="number" min="20" max="500" step="10" value="300" />
+            </label>
+            <label class="target-control" for="min-volume-input">
+              Min volume:
+              <input id="min-volume-input" type="number" min="0" max="10000" step="10" value="100" />
+            </label>
+            <label class="target-control check-control" for="strict-input">
+              <input id="strict-input" type="checkbox" checked />
+              Strict relevance
+            </label>
+            <label class="target-control check-control" for="brands-input">
+              <input id="brands-input" type="checkbox" />
+              Include brands
+            </label>
+          </div>
+        </form>
+
+        <div id="status" class="status" aria-live="polite"></div>
+      </section>
+
+      <section class="graph-wrap">
+        <div id="graph"></div>
+        <div id="graph-loader" class="graph-loader hidden" aria-live="polite">
+          <div class="loader-spinner"></div>
+          <p>Generuje mape i liczy klastry...</p>
+        </div>
+        <div id="tooltip" class="tooltip hidden"></div>
+      </section>
+
+      <section class="pillars-wrap">
+        <div class="pillars-head">
+          <div>
+            <h2>Content Pillars</h2>
+            <p>Filary i przykladowe tematy do planu contentowego.</p>
+          </div>
+          <button id="export-csv-btn" class="export-btn" type="button" disabled>Export CSV</button>
+        </div>
+        <div id="pillars-grid" class="pillars-grid"></div>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/force-graph"></script>
+    <script src="/static/app.js?v=20260307j"></script>
+  </body>
+</html>
+
+

@@ -1,0 +1,369 @@
+﻿:root {
+  --bg: #05070d;
+  --card: rgba(16, 20, 34, 0.6);
+  --card-border: rgba(99, 125, 255, 0.28);
+  --text: #e7ecff;
+  --muted: #97a0c7;
+  --accent: #27f2ff;
+  --accent-2: #70ffad;
+  --danger: #ff6a95;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(circle at 20% 10%, #0f1732 0%, var(--bg) 40%),
+    radial-gradient(circle at 80% 90%, #102340 0%, var(--bg) 35%);
+  color: var(--text);
+  font-family: "Sora", sans-serif;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(460px, 62vh) auto;
+  min-height: 100vh;
+  gap: 12px;
+  padding: 18px;
+}
+
+.hero {
+  text-align: center;
+  padding: 14px 16px;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.1vw, 2rem);
+  letter-spacing: 0.02em;
+}
+
+.hero p {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.search-box-wrap {
+  margin: 0 auto;
+  width: min(980px, 100%);
+  display: grid;
+  gap: 10px;
+}
+
+.search-box {
+  width: 100%;
+  display: flex;
+  border: 1px solid rgba(95, 110, 165, 0.55);
+  border-radius: 999px;
+  background: rgba(11, 14, 25, 0.92);
+  overflow: hidden;
+}
+
+.search-box input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  padding: 16px 20px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.search-box input::placeholder {
+  color: #7d85ab;
+}
+
+.search-box button {
+  border: 0;
+  padding: 0 24px;
+  font-weight: 700;
+  color: #00131f;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.search-box button:hover {
+  filter: brightness(1.06);
+}
+
+.search-box button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.target-control {
+  margin: 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.controls-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.check-control {
+  gap: 6px;
+}
+
+.target-control input {
+  width: 86px;
+  border: 1px solid rgba(95, 110, 165, 0.55);
+  border-radius: 8px;
+  background: rgba(11, 14, 25, 0.9);
+  color: var(--text);
+  padding: 6px 8px;
+  font-family: "Sora", sans-serif;
+}
+
+.check-control input[type="checkbox"] {
+  width: auto;
+  transform: translateY(1px);
+}
+
+.status {
+  margin-top: 10px;
+  min-height: 1.2em;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.graph-wrap {
+  position: relative;
+  border: 1px solid var(--card-border);
+  background: rgba(8, 11, 20, 0.75);
+  border-radius: 18px;
+  overflow: hidden;
+  min-height: 460px;
+}
+
+#graph {
+  width: 100%;
+  height: 100%;
+}
+
+#graph.is-loading {
+  filter: blur(1.4px) saturate(0.85);
+}
+
+.graph-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(3, 8, 18, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.loader-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(180, 197, 255, 0.35);
+  border-top-color: var(--accent);
+  box-shadow: 0 0 20px rgba(39, 242, 255, 0.35);
+  animation: spin 0.9s linear infinite;
+}
+
+.graph-loader p {
+  margin: 0;
+  color: #d8e3ff;
+  font-size: 0.9rem;
+}
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(6, 9, 16, 0.93);
+  color: #e7ecff;
+  font-size: 0.82rem;
+  transform: translate(10px, 10px);
+  white-space: nowrap;
+}
+
+.hidden {
+  display: none;
+}
+
+.pillars-wrap {
+  border: 1px solid var(--card-border);
+  background: rgba(8, 11, 20, 0.75);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.pillars-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.pillars-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pillars-head p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.export-btn {
+  border: 1px solid rgba(95, 110, 165, 0.6);
+  background: rgba(11, 14, 25, 0.9);
+  color: #dce6ff;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-family: "Sora", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.export-btn:hover {
+  border-color: rgba(112, 255, 173, 0.75);
+  background: rgba(16, 22, 40, 0.95);
+}
+
+.export-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.pillar-card {
+  border: 1px solid rgba(95, 110, 165, 0.45);
+  background: rgba(11, 14, 25, 0.85);
+  border-radius: 12px;
+  padding: 10px 11px;
+}
+
+.pillar-card h3 {
+  margin: 0 0 6px;
+  color: #c8fff0;
+  font-size: 0.95rem;
+}
+
+.pillar-meta {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.pillar-list-title {
+  display: block;
+  margin: 8px 0 5px;
+  color: #9ec8ff;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pillar-card ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #dfe6ff;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.pillar-empty {
+  border: 1px dashed rgba(95, 110, 165, 0.55);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.bg-glow {
+  position: fixed;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(90px);
+  opacity: 0.35;
+}
+
+.glow-1 {
+  width: 300px;
+  height: 300px;
+  background: #00e6ff;
+  top: -100px;
+  left: -70px;
+}
+
+.glow-2 {
+  width: 260px;
+  height: 260px;
+  background: #00ff8f;
+  bottom: -100px;
+  right: -70px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-rows: auto minmax(400px, 58vh) auto;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .search-box input {
+    padding: 13px 16px;
+  }
+
+  .search-box button {
+    padding: 0 16px;
+  }
+
+  .pillars-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
