@@ -47,15 +47,20 @@ export class HeliusEnhanced {
     return { ok: true, value: body };
   }
 
-  /** All pages in [gteTime, lteTime]; `truncated` when maxPages was hit (coverage unknown => caller must not qualify). */
+  /**
+   * All pages in [gteTime, lteTime]; `truncated` when maxPages was hit (coverage unknown => caller must not qualify).
+   * With a `type` filter Helius scans a bounded batch of signatures per call and returns short pages
+   * (e.g. 25–53 of 100) while older matches still exist (verified live 2026-09-28), so only an
+   * empty page marks the end of the history — never a page shorter than `limit`.
+   */
   async history(address: string, q: { type?: "SWAP" | "TRANSFER"; gteTime: number; lteTime: number; maxPages: number }): Promise<HistoryResult<{ txs: unknown[]; truncated: boolean }>> {
     const txs: unknown[] = [];
     let before: string | undefined;
     for (let i = 0; i < q.maxPages; i++) {
       const r = await this.page(address, { type: q.type, gteTime: q.gteTime, lteTime: q.lteTime, beforeSignature: before, limit: 100 });
       if (!r.ok) return r;
+      if (r.value.length === 0) return { ok: true, value: { txs, truncated: false } };
       txs.push(...r.value);
-      if (r.value.length < 100) return { ok: true, value: { txs, truncated: false } };
       const last = r.value[r.value.length - 1] as { signature?: string };
       if (!last.signature) return { ok: false, code: "PROVIDER_ERROR", detail: "missing signature for pagination" };
       before = last.signature;

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { FakeClock, ReasonCode } from "@solbot/domain";
 import {
+  HeliusEnhanced,
   HeliusRpc,
   JupiterClient,
   Priority,
@@ -308,5 +309,34 @@ describe("Jupiter /order — recorded live responses (2026-09-28, no taker)", ()
     const f = fx("jupiter-order-live-usdc-sol-25usdc.json");
     expect((await c.quote(reqOf(f))).ok).toBe(true);
     expect(new URL(calls[0]!.url).searchParams.get("excludeRouters")).toBe("jupiterz");
+  });
+});
+
+describe("Helius Enhanced history pagination", () => {
+  // type-filtered pages come back short while older matches still exist; only an empty page ends the history
+  const make = (pages: unknown[][]) => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    const { f, calls } = fakeFetch((url) => {
+      const before = new URL(url).searchParams.get("before-signature");
+      const i = before ? Number(before.slice(1)) + 1 : 0;
+      return { status: 200, body: pages[i] ?? [] };
+    });
+    return { h: new HeliusEnhanced(new ReadOnlyTransport(f, clock), new SlidingWindowLimiter(clock, 100), "k"), calls };
+  };
+  const page = (i: number, n: number) => Array.from({ length: n }, (_, j) => ({ signature: j === n - 1 ? `p${i}` : `x${i}-${j}` }));
+  const q = { type: "SWAP" as const, gteTime: 0, lteTime: 1, maxPages: 5 };
+
+  it("keeps paging past short pages until an empty page", async () => {
+    const { h, calls } = make([page(0, 48), page(1, 25), page(2, 7)]);
+    const r = await h.history("W", q);
+    expect(r.ok && r.value).toEqual({ txs: [...page(0, 48), ...page(1, 25), ...page(2, 7)], truncated: false });
+    expect(calls).toHaveLength(4);
+  });
+
+  it("marks the history truncated when maxPages is hit", async () => {
+    const { h } = make([page(0, 50), page(1, 50), page(2, 50)]);
+    const r = await h.history("W", { ...q, maxPages: 2 });
+    expect(r.ok && r.value.truncated).toBe(true);
+    expect(r.ok && r.value.txs).toHaveLength(100);
   });
 });

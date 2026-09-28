@@ -3,6 +3,11 @@
 > **G5 rozwiązane (2026-09-28):** deploy na Railway wykonany na polecenie właściciela — publiczny
 > HTTPS `https://api-production-9b38.up.railway.app` (webhook: `/api/webhooks/helius`). Szczegóły
 > w `OPERATIONS.md`. Webhook Helius zostanie zarejestrowany po bootstrapie portfeli.
+>
+> **Poprawka paginacji Helius (2026-09-28):** pierwszy bootstrap na produkcji dał 0/50 kwalifikacji,
+> bo strona krótsza niż 100 była brana za koniec historii. Helius z filtrem `type` zwraca krótkie
+> strony (25–53) mimo starszych wyników — koniec historii to dopiero pusta strona. Historie były więc
+> po cichu ucinane (czasem do ostatnich ~20 min). Naprawione w `HeliusEnhanced.history`.
 
 > **G4 rozwiązane (2026-09-28):** historia portfeli = Helius Enhanced Transactions (`type=SWAP`,
 > 30 dni), wycena nóg SOL/USDC = Binance public 1-min klines (`SOLUSDT`, `USDCUSDT`, bez klucza;
