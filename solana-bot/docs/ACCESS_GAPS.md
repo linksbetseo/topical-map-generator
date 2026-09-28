@@ -1,5 +1,9 @@
 # Rzeczywiste braki dostępu i danych
 
+> **G5 rozwiązane (2026-09-28):** deploy na Railway wykonany na polecenie właściciela — publiczny
+> HTTPS `https://api-production-9b38.up.railway.app` (webhook: `/api/webhooks/helius`). Szczegóły
+> w `OPERATIONS.md`. Webhook Helius zostanie zarejestrowany po bootstrapie portfeli.
+
 > **G4 rozwiązane (2026-09-28):** historia portfeli = Helius Enhanced Transactions (`type=SWAP`,
 > 30 dni), wycena nóg SOL/USDC = Binance public 1-min klines (`SOLUSDT`, `USDCUSDT`, bez klucza;
 > założenie USDT≈USD). Kandydaci = kupujący tokenów z Jupiter toptraded (bez selekcji po zyskach).
@@ -43,5 +47,5 @@ ograniczenie. Nic z tej listy nie zostało „obejście” danymi fikcyjnymi.
 ## Czego NIE zrobiono (celowo)
 
 * Nie zakupiono żadnego planu, nie utworzono kont, nie podniesiono limitów.
-* Nie wykonano deployu.
+* Deploy (Railway, PAPER) wykonano dopiero 2026-09-28 na polecenie właściciela.
 * Nie podpisano ani nie wysłano żadnej transakcji; w repo nie ma signera.

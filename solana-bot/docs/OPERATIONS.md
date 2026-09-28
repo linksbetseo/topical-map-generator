@@ -1,9 +1,30 @@
 # Operacje: Railway, backup/restore, monitoring
 
-## Railway (instrukcja — deploy NIE został wykonany)
+## Railway — stan wdrożenia (2026-09-28)
 
-Nie wykonuj płatnego deployu bez zgody właściciela. Koszt Railway zależy od zużycia i nie jest
-tu obiecywany. Proponowany układ w jednym projekcie Railway:
+Wdrożono na polecenie właściciela. Projekt Railway `solana-bot` (workspace „linksbetseo's Projects”),
+środowisko `production`, gałąź `claude/solana-bot-deploy-continue-n4nptf`, Root Directory `solana-bot`:
+
+| Serwis | Stan | Uwagi |
+|---|---|---|
+| Postgres | działa | szablon Railway `postgres` |
+| api | działa | `https://api-production-9b38.up.railway.app` (port 8080), healthcheck `/health/live` |
+| worker | działa | bez aktywnej sesji kończy proces i jest restartowany (restart `ALWAYS`) |
+
+Zmienne ustawione w obu serwisach: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `OWNER_API_TOKEN`,
+`HELIUS_WEBHOOK_AUTH` (losowe, wartości tylko w panelu Railway → Variables), `JUPITER_API_KEY`,
+`HELIUS_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `MODE=PAPER`, `LIVE_ENABLED=false`,
+`GIT_SHA=${{RAILWAY_GIT_COMMIT_SHA}}`; w api dodatkowo `PORT=8080`.
+
+Utworzona sesja: `ses_0mul742nr6861f92f77548816` (`CONFLUENCE`, `PAPER`, stan `DRAFT`).
+Pozostało: bootstrap portfeli → rejestracja webhooka → validate → start (krok 5 poniżej).
+
+**Config-as-code (`railway.json`) jest na Railway wycofane** — API odrzuca ustawienie
+`railwayConfigFile`. Pliki `deploy/railway.*.json` służą teraz tylko jako opis; te same wartości
+(start command, healthcheck, restart policy) ustawiono bezpośrednio w ustawieniach serwisów.
+Serwis tworzony z repo bez triggera gałęzi buduje `main` — trzeba ustawić gałąź w Settings → Source.
+
+Koszt Railway zależy od zużycia i nie jest tu obiecywany. Proponowany układ w jednym projekcie Railway:
 
 | Serwis | Root | Start command | Zmienne |
 |---|---|---|---|
@@ -21,9 +42,10 @@ tu obiecywany. Proponowany układ w jednym projekcie Railway:
 ### Kolejność uruchomienia na Railway (gotowe pliki: `deploy/railway.api.json`, `deploy/railway.worker.json`)
 
 1. Railway → New Project → Deploy from GitHub → repo `linksbetseo/topical-map-generator`, gałąź
-   `claude/solana-paper-trading-bot-2zfi7t`.
-2. Serwis **api**: Settings → Root Directory `solana-bot`, Config-as-code path `deploy/railway.api.json`,
-   Networking → Generate Domain. Serwis **worker**: ten sam root, `deploy/railway.worker.json`.
+   `claude/solana-bot-deploy-continue-n4nptf` (Settings → Source → Branch).
+2. Serwis **api**: Settings → Root Directory `solana-bot`, start command / healthcheck / restart jak w
+   `deploy/railway.api.json` (ustawione ręcznie, bo config-as-code jest wycofane), Networking →
+   Generate Domain (port 8080). Serwis **worker**: ten sam root, wartości z `deploy/railway.worker.json`.
 3. Dodaj **PostgreSQL** (plugin) i w obu serwisach `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
 4. Zmienne (obie usługi): `JUPITER_API_KEY`, `HELIUS_API_KEY`, `HELIUS_WEBHOOK_AUTH`, `OWNER_API_TOKEN`,
    `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `MODE=PAPER`, `LIVE_ENABLED=false`. Nigdy klucza portfela.
