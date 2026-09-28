@@ -138,3 +138,21 @@ Free (1 RPS / 60 na minutę, okno przesuwne) daje ≈ 7 zapytań/min zapasu przy
 — **niewystarczające** na wejścia i retry. Rate limiter ma kolejki priorytetowe:
 `EXIT > RECONCILE > ENTRY > ANALYTICS > DISCOVERY`; brak budżetu wstrzymuje najniższe
 priorytety, nigdy monitoringu pozycji.
+
+---
+
+## Wynik weryfikacji read-only (2026-09-28, sesja implementacyjna)
+
+`pnpm --filter @solbot/worker check-providers` (bez kluczy):
+
+```
+FAILED  jupiter.price.v3 SOL,USDC                                   :: PROVIDER_ERROR: HTTP 403
+FAILED  jupiter.tokens.v2.recent                                    :: PROVIDER_ERROR: HTTP 403
+FAILED  jupiter.swap.v2.order quote-only 1 USDC->SOL (manual)       :: PROVIDER_ERROR: HTTP 403
+SKIPPED_NO_KEY helius.*
+```
+
+403 pochodzi z proxy egress środowiska deweloperskiego (G1), nie od Jupiter. Status adapterów:
+`IMPLEMENTED`, `TESTED_WITH_FIXTURES`; **nie** `VERIFIED_READ_ONLY_MAINNET`.
+Pierwsze uruchomienie w środowisku z dostępem do sieci ma rozstrzygnąć semantykę `outAmount`
+vs opłata w mincie wyjściowym (normalizer i tak weryfikuje ją per odpowiedź).

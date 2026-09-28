@@ -1,0 +1,35 @@
+{
+  "fixture_origin": "synthetic-from-openapi-schema",
+  "source": "jup-ag/docs openapi-spec/swap/v2/swap.yaml @956fe05 — field names/types from schema; values synthetic. NOT a recorded live response.",
+  "request": { "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "outputMint": "7777777777777777777777777777777777777777777", "amount": "25000000", "slippageBps": 100 },
+  "response": {
+    "mode": "manual",
+    "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "outputMint": "7777777777777777777777777777777777777777777",
+    "inAmount": "25000000",
+    "outAmount": "1234567890",
+    "inUsdValue": 25.0,
+    "outUsdValue": 24.96,
+    "priceImpact": -0.12,
+    "swapUsdValue": 25.0,
+    "otherAmountThreshold": "1222222211",
+    "swapMode": "ExactIn",
+    "slippageBps": 100,
+    "routePlan": [
+      { "swapInfo": { "ammKey": "AmmA", "label": "Meteora DLMM", "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "outputMint": "So11111111111111111111111111111111111111112", "inAmount": "24975000", "outAmount": "166000000" }, "percent": 100, "bps": 10000 },
+      { "swapInfo": { "ammKey": "AmmB", "label": "Raydium CPMM", "inputMint": "So11111111111111111111111111111111111111112", "outputMint": "7777777777777777777777777777777777777777777", "inAmount": "166000000", "outAmount": "1234567890" }, "percent": 100, "bps": 10000 }
+    ],
+    "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "feeBps": 10,
+    "platformFee": { "amount": "25000", "feeBps": 10, "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+    "signatureFeeLamports": 5000,
+    "prioritizationFeeLamports": 0,
+    "rentFeeLamports": 0,
+    "router": "metis",
+    "transaction": null,
+    "gasless": false,
+    "requestId": "req-fixture-1",
+    "totalTime": 142,
+    "taker": null
+  }
+}

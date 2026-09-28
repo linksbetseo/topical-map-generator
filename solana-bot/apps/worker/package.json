@@ -1,0 +1,24 @@
+{
+  "name": "@solbot/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-providers": "tsx src/check-providers.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@solbot/brokers": "workspace:*",
+    "@solbot/config": "workspace:*",
+    "@solbot/db": "workspace:*",
+    "@solbot/domain": "workspace:*",
+    "@solbot/ledger": "workspace:*",
+    "@solbot/providers": "workspace:*",
+    "@solbot/reporting": "workspace:*",
+    "@solbot/risk": "workspace:*",
+    "@solbot/strategy": "workspace:*"
+  }
+}

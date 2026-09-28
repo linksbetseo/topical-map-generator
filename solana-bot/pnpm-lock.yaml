@@ -27,6 +27,36 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@26.6.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(tsx@4.23.15))
 
+  apps/worker:
+    dependencies:
+      '@solbot/brokers':
+        specifier: workspace:*
+        version: link:../../packages/brokers
+      '@solbot/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@solbot/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@solbot/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@solbot/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
+      '@solbot/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
+      '@solbot/reporting':
+        specifier: workspace:*
+        version: link:../../packages/reporting
+      '@solbot/risk':
+        specifier: workspace:*
+        version: link:../../packages/risk
+      '@solbot/strategy':
+        specifier: workspace:*
+        version: link:../../packages/strategy
+
   packages/brokers:
     dependencies:
       '@solbot/config':

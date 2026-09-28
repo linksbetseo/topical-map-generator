@@ -1,0 +1,25 @@
+{
+  "fixture_origin": "synthetic-from-openapi-schema",
+  "source": "jup-ag/docs openapi-spec/swap/v2/swap.yaml @956fe05 — values synthetic; platformFee shape from swap/order-and-execute.mdx example. NOT a recorded live response.",
+  "request": { "inputMint": "7777777777777777777777777777777777777777777", "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "amount": "1234567890", "slippageBps": 150 },
+  "response": {
+    "mode": "manual",
+    "inputMint": "7777777777777777777777777777777777777777777",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "inAmount": "1234567890",
+    "outAmount": "24850150",
+    "priceImpact": 0.2,
+    "otherAmountThreshold": "24477397",
+    "swapMode": "ExactIn",
+    "slippageBps": 150,
+    "routePlan": [
+      { "swapInfo": { "ammKey": "AmmB", "label": "Raydium CPMM", "inputMint": "7777777777777777777777777777777777777777777", "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "inAmount": "1234567890", "outAmount": "24875025" }, "percent": 100, "bps": 10000 }
+    ],
+    "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "feeBps": 10,
+    "platformFee": { "amount": "24875", "feeBps": 10, "feeMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+    "router": "metis",
+    "transaction": null,
+    "requestId": "req-fixture-2"
+  }
+}
