@@ -9,7 +9,7 @@ import {
 } from "@solbot/domain";
 import { openingTx, type OpeningAllocation } from "@solbot/ledger";
 import { insertLedgerTx } from "./ledger-repo.ts";
-import type { Client, Pool } from "./pool.ts";
+import { json, type Client, type Pool } from "./pool.ts";
 
 export interface SessionRow {
   id: string;
@@ -23,6 +23,11 @@ export interface SessionRow {
   t_end: Date | null;
   entries_paused_by_owner: boolean;
   intervention: boolean;
+  flatten_requested: boolean;
+  day_start_equity: Record<string, string>;
+  peak_equity_usd: string | null;
+  t_end_snapshot: unknown;
+  last_tick_at: Date | null;
 }
 
 export async function createSession(
@@ -38,7 +43,7 @@ export async function createSession(
       s.strategyVersion,
       s.strategyCodeHash,
     ]);
-    await c.query(`INSERT INTO config_snapshots (config_hash, config) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [s.configHash, JSON.stringify(s.config)]);
+    await c.query(`INSERT INTO config_snapshots (config_hash, config) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [s.configHash, json(s.config)]);
     await c.query(
       `INSERT INTO sessions (id, kind, mode, state, strategy_name, strategy_version, config_hash) VALUES ($1,$2,$3,'DRAFT',$4,$5,$6)`,
       [id, s.kind, s.mode, s.strategyName, s.strategyVersion, s.configHash],
@@ -114,7 +119,7 @@ export async function insertRawEvent(
     payload: unknown;
   },
 ): Promise<{ inserted: boolean; id: string }> {
-  const payloadJson = JSON.stringify(e.payload);
+  const payloadJson = json(e.payload);
   const id = newId("evt");
   const r = await c.query<{ id: string }>(
     `INSERT INTO raw_events (id, provider, source_event_id, leg_index, owner, block_time, slot, commitment, received_at, available_at, schema_version, raw_payload, raw_payload_hash)

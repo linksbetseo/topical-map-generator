@@ -24,7 +24,7 @@ export async function insertLedgerTx(c: Client, tx: LedgerTransaction): Promise<
 
 export async function loadLedger(c: Client | { query: Client["query"] }, sessionId: string): Promise<Ledger> {
   const txs = await c.query<{ id: string; idempotency_key: string; kind: LedgerTransaction["kind"]; at: Date; refs: Record<string, string>; memo: string | null }>(
-    `SELECT id, idempotency_key, kind, at, refs, memo FROM ledger_transactions WHERE session_id = $1 ORDER BY at, id`,
+    `SELECT id, idempotency_key, kind, at, refs, memo FROM ledger_transactions WHERE session_id = $1 ORDER BY seq`,
     [sessionId],
   );
   const entries = await c.query<{ tx_id: string; bucket: string; asset: string; amount_raw: string }>(

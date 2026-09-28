@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@solbot/brokers": "workspace:*",
-    "@solbot/config": "workspace:*",
     "@solbot/db": "workspace:*",
     "@solbot/domain": "workspace:*",
     "@solbot/ledger": "workspace:*",
@@ -20,5 +19,8 @@
     "@solbot/reporting": "workspace:*",
     "@solbot/risk": "workspace:*",
     "@solbot/strategy": "workspace:*"
+  },
+  "devDependencies": {
+    "@solbot/config": "workspace:*"
   }
 }

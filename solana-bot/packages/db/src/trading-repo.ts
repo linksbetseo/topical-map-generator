@@ -1,8 +1,8 @@
 import { NATIVE_SOL, USDC_MINT, newId, type Dec } from "@solbot/domain";
-import { Bucket, buyFillTx, failedAttemptFeeTx, releaseTx, reserveTx, type FeeItem } from "@solbot/ledger";
+import { Bucket, buyFillTx, failedAttemptFeeTx, releaseTx, rentRecoveryTx, reserveTx, sellFillTx, type FeeItem } from "@solbot/ledger";
 import { insertLedgerTx, sqlBalance } from "./ledger-repo.ts";
 import { lockSession, type SessionRow } from "./sessions-repo.ts";
-import type { Client, Pool } from "./pool.ts";
+import { json, type Client, type Pool } from "./pool.ts";
 
 export interface EntryReservationRequest {
   sessionId: string;
@@ -56,7 +56,7 @@ export async function reserveEntry(pool: Pool, req: EntryReservationRequest): Pr
     await c.query(
       `INSERT INTO trade_intents (id, session_id, strategy_version, config_hash, idempotency_key, side, kind, mint, input_mint, output_mint, amount_raw, notional_usd, signal_id, position_id, risk_decision, inputs, created_at)
        VALUES ($1,$2,$3,$4,$5,'BUY','ENTRY',$6,$7,$6,$8,$9,$10,$11,$12,$13,$14)`,
-      [intentId, req.sessionId, session.strategy_version, session.config_hash, req.idempotencyKey, req.mint, USDC_MINT, d.usdcRaw.toString(), d.notionalUsd.toString(), req.signalId, positionId, JSON.stringify(d.decision), JSON.stringify(req.inputs), req.at],
+      [intentId, req.sessionId, session.strategy_version, session.config_hash, req.idempotencyKey, req.mint, USDC_MINT, d.usdcRaw.toString(), d.notionalUsd.toString(), req.signalId, positionId, json(d.decision), json(req.inputs), req.at],
     );
     await insertLedgerTx(c, reserveTx({ id: ltxId, sessionId: req.sessionId, idempotencyKey: `reserve:${intentId}`, at: req.at, refs: { intent_id: intentId } }, { usdcRaw: d.usdcRaw, lamports: d.lamports }));
     await c.query(
@@ -84,7 +84,7 @@ export async function createAttempt(c: Client | Pool, a: { intentId: string; att
   const id = newId("att");
   await c.query(
     `INSERT INTO order_attempts (id, intent_id, attempt_no, state, broker, model, fencing_token, started_at) VALUES ($1,$2,$3,'QUOTED','PAPER',$4,$5,$6)`,
-    [id, a.intentId, a.attemptNo, JSON.stringify(a.model), a.fencingToken?.toString() ?? null, a.at],
+    [id, a.intentId, a.attemptNo, json(a.model), a.fencingToken?.toString() ?? null, a.at],
   );
   return id;
 }
@@ -150,7 +150,7 @@ export async function bookBuyFill(c: Client, f: BookBuyFill): Promise<"BOOKED" |
     await insertLedgerTx(c, releaseTx({ id: newId("ltx"), sessionId: f.sessionId, idempotencyKey: `release:${f.intentId}`, at: f.at }, { usdcRaw: leftUsdc, lamports: leftLamports }));
   }
   await c.query(`UPDATE balance_reservations SET status='CONSUMED', resolved_at=$2 WHERE id=$1`, [r.id, f.at]);
-  await c.query(`UPDATE order_attempts SET state='PAPER_FILLED', outcome=$2, finished_at=$3 WHERE id=$1`, [f.attemptId, JSON.stringify(f.outcome), f.at]);
+  await c.query(`UPDATE order_attempts SET state='PAPER_FILLED', outcome=$2, finished_at=$3 WHERE id=$1`, [f.attemptId, json(f.outcome), f.at]);
   await c.query(
     `UPDATE positions SET status='OPEN', qty_raw=$2, cost_usd=$3, rent_lamports=$4, entry_filled_at=$5, peak_net_value_usd=NULL WHERE id=$1 AND status='RESERVED'`,
     [f.positionId, f.tokenOutRaw.toString(), f.costUsd.toString(), f.rentLamports.toString(), f.at],
@@ -177,7 +177,7 @@ export async function resolveFailedEntry(
   await c.query(`UPDATE order_attempts SET state=$2, outcome=$3, reason_code=$4, finished_at=$5, counts_toward_daily_attempts=$6 WHERE id=$1`, [
     a.attemptId,
     a.state,
-    JSON.stringify(a.outcome),
+    json(a.outcome),
     a.reasonCode,
     a.at,
     counts,
@@ -197,4 +197,100 @@ export async function resolveFailedEntry(
       await c.query(`UPDATE positions SET status='CLOSED', closed_at=$2, exit_reason='ENTRY_NOT_FILLED' WHERE id=$1 AND status='RESERVED'`, [a.positionId, a.at]);
     }
   }
+}
+
+export async function createExitIntent(
+  c: Client,
+  x: { sessionId: string; positionId: string; mint: string; qtyRaw: bigint; kind: "EXIT_NORMAL" | "EXIT_EMERGENCY"; exitReason: string; idempotencyKey: string; decision: unknown; inputs: unknown; at: Date },
+): Promise<string> {
+  const session = await lockSession(c, x.sessionId);
+  const existing = await c.query<{ id: string }>(`SELECT id FROM trade_intents WHERE session_id=$1 AND idempotency_key=$2`, [x.sessionId, x.idempotencyKey]);
+  if (existing.rows[0]) return existing.rows[0].id;
+  const id = newId("int");
+  await c.query(
+    `INSERT INTO trade_intents (id, session_id, strategy_version, config_hash, idempotency_key, side, kind, mint, input_mint, output_mint, amount_raw, position_id, exit_reason, risk_decision, inputs, created_at)
+     VALUES ($1,$2,$3,$4,$5,'SELL',$6,$7,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [id, x.sessionId, session.strategy_version, session.config_hash, x.idempotencyKey, x.kind, x.mint, USDC_MINT, x.qtyRaw.toString(), x.positionId, x.exitReason, json(x.decision), json(x.inputs), x.at],
+  );
+  await c.query(`UPDATE positions SET status='EXITING', exit_reason=$2 WHERE id=$1 AND status IN ('OPEN','EXITING')`, [x.positionId, x.exitReason]);
+  return id;
+}
+
+export interface BookSellFill {
+  sessionId: string;
+  intentId: string;
+  attemptId: string;
+  positionId: string;
+  fillId: string;
+  tokenMint: string;
+  tokenInRaw: bigint;
+  usdcOutRaw: bigint;
+  minOutRaw: bigint;
+  fees: FeeItem[];
+  usdcUsd: Dec;
+  solUsd: Dec;
+  executionFidelity: string;
+  closeAccount: { rentLamports: bigint; closeFees: FeeItem[] } | null;
+  exitReason: string;
+  realizedPnlUsd: Dec;
+  at: Date;
+  outcome: unknown;
+}
+
+/** Books a paper sell exactly once and closes the position (v1: whole position exits together). */
+export async function bookSellFill(c: Client, f: BookSellFill): Promise<"BOOKED" | "ALREADY_BOOKED"> {
+  await lockSession(c, f.sessionId);
+  const ins = await c.query(
+    `INSERT INTO fills (id, attempt_id, position_id, side, in_mint, in_amount_raw, out_mint, out_amount_raw, min_out_raw, usdc_usd, sol_usd, execution_fidelity, filled_at)
+     VALUES ($1,$2,$3,'SELL',$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (attempt_id) DO NOTHING`,
+    [f.fillId, f.attemptId, f.positionId, f.tokenMint, f.tokenInRaw.toString(), USDC_MINT, f.usdcOutRaw.toString(), f.minOutRaw.toString(), f.usdcUsd.toString(), f.solUsd.toString(), f.executionFidelity, f.at],
+  );
+  if (ins.rowCount === 0) return "ALREADY_BOOKED";
+  const allFees = [...f.fees, ...(f.closeAccount?.closeFees ?? [])];
+  for (const fee of allFees) {
+    await c.query(
+      `INSERT INTO fee_items (attempt_id, fill_id, kind, asset, amount_raw, usd_fx, source, included_in_quote, is_estimate) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [f.attemptId, f.fillId, fee.kind, fee.asset, fee.amountRaw.toString(), fee.usdFx?.toString() ?? null, fee.source, fee.includedInQuote, fee.isEstimate],
+    );
+  }
+  await insertLedgerTx(
+    c,
+    sellFillTx(
+      { id: newId("ltx"), sessionId: f.sessionId, idempotencyKey: `fill:${f.attemptId}`, at: f.at, refs: { fill_id: f.fillId, intent_id: f.intentId } },
+      { tokenMint: f.tokenMint, tokenInRaw: f.tokenInRaw, usdcOutRaw: f.usdcOutRaw, fees: f.fees },
+    ),
+  );
+  if (f.closeAccount && f.closeAccount.rentLamports > 0n) {
+    await insertLedgerTx(
+      c,
+      rentRecoveryTx({ id: newId("ltx"), sessionId: f.sessionId, idempotencyKey: `rent:${f.positionId}`, at: f.at, refs: { position_id: f.positionId } }, f.closeAccount.rentLamports, f.closeAccount.closeFees),
+    );
+  }
+  await c.query(`UPDATE order_attempts SET state='PAPER_FILLED', outcome=$2, finished_at=$3 WHERE id=$1`, [f.attemptId, json(f.outcome), f.at]);
+  await c.query(
+    `UPDATE positions SET status='CLOSED', qty_raw=0, closed_at=$2, exit_reason=$3, realized_pnl_usd=$4, rent_lamports=0 WHERE id=$1`,
+    [f.positionId, f.at, f.exitReason, f.realizedPnlUsd.toString()],
+  );
+  return "BOOKED";
+}
+
+export async function resolveFailedExit(
+  c: Client,
+  a: { sessionId: string; attemptId: string; positionId: string; state: "FAILED_PAPER" | "CANCELLED_BEFORE_SEND"; chargedFees: FeeItem[]; reasonCode: string; outcome: unknown; at: Date; nextExitAt: Date; valuationStatus: string | null },
+): Promise<void> {
+  await lockSession(c, a.sessionId);
+  for (const fee of a.chargedFees) {
+    await c.query(
+      `INSERT INTO fee_items (attempt_id, kind, asset, amount_raw, usd_fx, source, included_in_quote, is_estimate) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [a.attemptId, fee.kind, fee.asset, fee.amountRaw.toString(), fee.usdFx?.toString() ?? null, fee.source, fee.includedInQuote, fee.isEstimate],
+    );
+  }
+  if (a.chargedFees.length > 0) {
+    await insertLedgerTx(c, failedAttemptFeeTx({ id: newId("ltx"), sessionId: a.sessionId, idempotencyKey: `failfee:${a.attemptId}`, at: a.at }, a.chargedFees, Bucket.WALLET));
+  }
+  await c.query(`UPDATE order_attempts SET state=$2, outcome=$3, reason_code=$4, finished_at=$5 WHERE id=$1`, [a.attemptId, a.state, json(a.outcome), a.reasonCode, a.at]);
+  await c.query(
+    `UPDATE positions SET exit_attempts = exit_attempts + 1, next_exit_at=$2, valuation_status=COALESCE($3, valuation_status) WHERE id=$1`,
+    [a.positionId, a.nextExitAt, a.valuationStatus],
+  );
 }

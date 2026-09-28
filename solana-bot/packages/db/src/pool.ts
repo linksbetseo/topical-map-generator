@@ -57,3 +57,8 @@ export async function withTx<T>(pool: Pool, fn: (c: Client) => Promise<T>): Prom
     c.release();
   }
 }
+
+/** JSON for jsonb columns: bigint as decimal string, Decimal via its toJSON. */
+export function json(value: unknown): string {
+  return JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
+}
