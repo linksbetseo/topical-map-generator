@@ -1,16 +1,23 @@
 {
-  "name": "@solbot/reporting",
+  "name": "@solbot/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "start": "tsx src/main.ts"
+  },
   "dependencies": {
     "@solbot/config": "workspace:*",
     "@solbot/db": "workspace:*",
     "@solbot/domain": "workspace:*",
     "@solbot/ledger": "workspace:*",
-    "@solbot/strategy": "workspace:*"
+    "@solbot/providers": "workspace:*",
+    "@solbot/reporting": "workspace:*",
+    "@solbot/strategy": "workspace:*",
+    "@solbot/worker": "workspace:*",
+    "fastify": "^5.12.5"
   }
 }

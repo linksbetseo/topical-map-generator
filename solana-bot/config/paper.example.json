@@ -1,0 +1,124 @@
+{
+  "experiment": {
+    "strategy": "confluence_v1",
+    "strategy_version": "1.0.0",
+    "execution_profile": "jupiter_order_manual_v1",
+    "duration_hours": 168,
+    "entry_cutoff_before_end_hours": 4,
+    "settlement_max_minutes": 30
+  },
+  "capital": {
+    "initial_total_usd": "500",
+    "initial_sol_value_usd": "20",
+    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "wsol_mint": "So11111111111111111111111111111111111111112"
+  },
+  "universe": {
+    "min_pool_age_minutes": 10,
+    "max_pool_age_hours": 72,
+    "min_liquidity_usd": "100000",
+    "min_volume_5m_usd": "10000",
+    "min_sells_5m": 10,
+    "min_holders": 200,
+    "max_top10_holders_bps": 3000,
+    "max_largest_holder_bps": 1000,
+    "max_price_impact_bps_per_side": 100,
+    "max_round_trip_cost_bps": 200,
+    "max_price_change_5m_bps": 3000,
+    "allowed_token2022_extensions": [
+      18,
+      19
+    ]
+  },
+  "wallets": {
+    "qualification_window_days": 30,
+    "max_candidates": 200,
+    "max_qualified": 100,
+    "min_qualified_for_session": 20,
+    "min_episodes": 30,
+    "min_distinct_tokens": 20,
+    "min_active_days": 7,
+    "min_volume_coverage_bps": 9000,
+    "min_profit_factor": "1.2",
+    "min_losing_episodes": 5,
+    "max_single_token_positive_pnl_bps": 4000,
+    "edge_min_transfer_usd": "20",
+    "edge_min_direct_transfers": 2,
+    "edge_common_funder_min_shared_mints": 3,
+    "edge_common_funder_max_gap_seconds": 60,
+    "edge_common_funder_lookback_days": 7,
+    "edge_validity_days": 30
+  },
+  "signal": {
+    "min_wallets": 3,
+    "min_clusters": 3,
+    "window_seconds": 180,
+    "min_buy_usd": "100",
+    "min_retained_bps": 8000,
+    "max_delivery_lag_seconds": 15,
+    "ttl_seconds": 30,
+    "mint_cooldown_hours": 24
+  },
+  "sizing": {
+    "max_position_usd": "25",
+    "max_position_equity_bps": 500,
+    "min_position_usd": "10",
+    "max_open_positions": 4,
+    "max_exposure_equity_bps": 2000,
+    "max_entry_attempts_per_utc_day": 8,
+    "max_entry_notional_per_utc_day_usd": "200"
+  },
+  "exits": {
+    "stop_loss_bps": 1000,
+    "distribution_min_wallets": 2,
+    "distribution_min_reduction_bps": 5000,
+    "trailing_activation_bps": 1500,
+    "trailing_drawdown_bps": 800,
+    "take_profit_bps": 2500,
+    "time_stop_hours": 4
+  },
+  "risk": {
+    "daily_loss_max_usd": "20",
+    "daily_loss_equity_bps": 400,
+    "session_loss_usd": "50",
+    "drawdown_max_usd": "50",
+    "drawdown_peak_bps": 1000,
+    "entry_slippage_bps": 100,
+    "exit_slippage_bps": 150,
+    "emergency_exit_slippage_bps": 300,
+    "entry_fee_cap_usd": "0.20",
+    "exit_fee_cap_usd": "0.20",
+    "emergency_exit_fee_cap_usd": "0.50",
+    "max_rent_per_entry_usd": "1",
+    "sol_reserve_margin_usd": "0.50"
+  },
+  "execution": {
+    "profile": "BASE",
+    "base_fee_lamports_per_signature": 5000,
+    "signatures_per_tx": 1,
+    "priority_fee_lamports_estimate": 100000,
+    "spl_token_account_rent_lamports": 2039280,
+    "model_close_token_account": true,
+    "max_execution_attempts_per_intent": 3
+  },
+  "freshness": {
+    "quote_ms": 2000,
+    "flow_ms": 15000,
+    "market_metadata_ms": 30000,
+    "mint_risk_ms": 60000,
+    "holder_snapshot_ms": 120000,
+    "fx_ms": 60000
+  },
+  "polling": {
+    "position_quote_ms": 5000,
+    "discovery_ms": 60000,
+    "metadata_ms": 30000,
+    "reconciliation_ms": 60000
+  },
+  "budget": {
+    "paid_plan_purchase_allowed": false,
+    "auto_upgrade": false,
+    "monthly_alert_usd": "100",
+    "jupiter_rps": 1
+  }
+}
