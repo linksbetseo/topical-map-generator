@@ -37,13 +37,15 @@ describe("readiness gates before 'Rozpocznij 7 dni'", () => {
     expect(checks.filter((c) => !c.ok)).toEqual([]);
   });
 
-  it("default 4 positions do not fit the keyless (or free) Jupiter budget", async () => {
+  it("default 3 positions fit the Free key but not keyless; 4 positions do not fit Free", async () => {
     const id = await session();
     await fxEvery(30);
     const noKey = await readinessChecks(pool, id, cfg, now, probes, {});
     expect(noKey.find((c) => c.name === "budżet zapytań Jupiter")!.ok).toBe(false);
     const freeKey = await readinessChecks(pool, id, cfg, now, probes, { JUPITER_API_KEY: "k" });
-    expect(freeKey.find((c) => c.name === "budżet zapytań Jupiter")!.ok).toBe(false);
+    expect(freeKey.find((c) => c.name === "budżet zapytań Jupiter")!.ok).toBe(true);
+    const four = await readinessChecks(pool, id, parseConfig({ sizing: { max_open_positions: 4 } }), now, probes, { JUPITER_API_KEY: "k" });
+    expect(four.find((c) => c.name === "budżet zapytań Jupiter")!.ok).toBe(false);
   });
 
   it("fails on a data gap, a signer secret, failing endpoints or a DEMO/LIVE mismatch", async () => {

@@ -63,7 +63,7 @@
     "max_position_usd": "25",
     "max_position_equity_bps": 500,
     "min_position_usd": "10",
-    "max_open_positions": 4,
+    "max_open_positions": 3,
     "max_exposure_equity_bps": 2000,
     "max_entry_attempts_per_utc_day": 8,
     "max_entry_notional_per_utc_day_usd": "100"

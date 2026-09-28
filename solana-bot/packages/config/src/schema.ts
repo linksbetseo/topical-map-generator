@@ -76,7 +76,8 @@ export const ConfigSchema = z.object({
     max_position_usd: usdString.default("25"),
     max_position_equity_bps: bpsInt.default(500),
     min_position_usd: usdString.default("10"),
-    max_open_positions: z.number().int().positive().default(4),
+    /** Owner decision 2026-09-28: 3 (brief: 4) — fits the Jupiter Free budget (1 RPS). */
+    max_open_positions: z.number().int().positive().default(3),
     max_exposure_equity_bps: bpsInt.default(2_000),
     max_entry_attempts_per_utc_day: z.number().int().positive().default(8),
     /** Owner decision 2026-09-28: 100 USD per UTC day (brief default was 200). */

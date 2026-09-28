@@ -3,7 +3,8 @@ import { D, ReasonCode, SessionState } from "@solbot/domain";
 import { parseConfig } from "@solbot/config";
 import { evaluateEntry, evaluateLossTriggers, exposureUsd, type EntryCandidate, type RiskSnapshot } from "../src/index.ts";
 
-const cfg = parseConfig();
+// Exposure/sizing scenarios use the brief's 4 positions; the default (3) is tested separately.
+const cfg = parseConfig({ sizing: { max_open_positions: 4 } });
 const now = new Date("2026-10-02T10:00:00Z");
 
 function snap(over: Partial<RiskSnapshot> = {}): RiskSnapshot {
@@ -69,6 +70,11 @@ describe("sizing", () => {
     const d = evaluateEntry(cand, snap({ positions: [pos("a", "45", "30"), pos("b", "25", "25"), pos("c", "25", "25")] }), cfg);
     expect(d.approved).toBe(false);
     expect(codes(d)).toContain(ReasonCode.EXPOSURE_LIMIT);
+  });
+
+  it("default config allows at most 3 open or reserved positions", () => {
+    const d = evaluateEntry(cand, snap({ positions: [pos("a", "1", "1"), pos("b", "1", "1")], pendingEntries: [{ mint: "d", notionalUsd: new D(1), deployerGroup: null }] }), parseConfig());
+    expect(codes(d)).toContain(ReasonCode.MAX_POSITIONS_REACHED);
   });
 
   it("max 4 open or reserved positions", () => {

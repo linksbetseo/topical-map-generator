@@ -8,7 +8,7 @@ describe("config defaults follow the brief", () => {
     expect(c.capital.initial_sol_value_usd).toBe("20");
     expect(c.sizing.max_position_usd).toBe("25");
     expect(c.sizing.max_position_equity_bps).toBe(500);
-    expect(c.sizing.max_open_positions).toBe(4);
+    expect(c.sizing.max_open_positions).toBe(3); // owner decision (brief: 4)
     expect(c.sizing.max_exposure_equity_bps).toBe(2_000);
     expect(c.sizing.max_entry_attempts_per_utc_day).toBe(8);
     expect(c.sizing.max_entry_notional_per_utc_day_usd).toBe("100"); // owner decision (brief: 200)
@@ -80,7 +80,9 @@ describe("keyless operation", () => {
     const def = parseConfig();
     expect(effectiveJupiterRps(def, false)).toBe(0.5);
     expect(effectiveJupiterRps(def, true)).toBe(1);
-    expect(jupiterBudget(def, 0.5)).toMatchObject({ requiredPerMinute: 58, availablePerMinute: 24, ok: false });
+    expect(jupiterBudget(def, 0.5)).toMatchObject({ requiredPerMinute: 46, availablePerMinute: 24, ok: false });
+    expect(jupiterBudget(def, 1)).toMatchObject({ requiredPerMinute: 46, availablePerMinute: 48, ok: true });
+    expect(jupiterBudget(parseConfig({ sizing: { max_open_positions: 4 } }), 1).ok).toBe(false);
     expect(jupiterBudget(parseConfig({ sizing: { max_open_positions: 1 }, budget: { jupiter_rps: 0.5 } }), 0.5).ok).toBe(true);
   });
 });
