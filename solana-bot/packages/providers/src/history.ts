@@ -14,18 +14,45 @@ import { Priority, type SlidingWindowLimiter } from "./rate-limit.ts";
 
 export type HistoryResult<T> = { ok: true; value: T } | { ok: false; code: "PROVIDER_UNAVAILABLE" | "PROVIDER_ERROR" | "RATE_LIMITED"; detail: string };
 
+export type HeliusPacing = {
+  /** Minimum gap between calls. The sliding-window limiter alone lets a whole minute's budget out in a
+   *  burst, which Helius Free (Enhanced API ~2 req/s) answers with HTTP 429. */
+  minIntervalMs: number;
+  /** Retries of a 429 answer, with doubling back-off starting at `backoffMs`. */
+  retries429: number;
+  backoffMs: number;
+  sleep: (ms: number) => Promise<void>;
+  nowMs: () => number;
+};
+
+const NO_PACING: HeliusPacing = { minIntervalMs: 0, retries429: 0, backoffMs: 0, sleep: async () => undefined, nowMs: () => 0 };
+
 export class HeliusEnhanced {
   calls = 0;
+  private lastCallAt = Number.NEGATIVE_INFINITY;
   constructor(
     private readonly transport: ReadOnlyTransport,
     private readonly limiter: SlidingWindowLimiter,
     private readonly apiKey: string,
     private readonly base = "https://api-mainnet.helius-rpc.com/v0",
+    private readonly pacing: HeliusPacing = NO_PACING,
   ) {}
 
-  /** One page (newest first). */
+  /** One page (newest first); a 429 is retried with back-off before it is reported. */
   async page(address: string, q: { type?: "SWAP" | "TRANSFER"; gteTime?: number; lteTime?: number; beforeSignature?: string; limit?: number }): Promise<HistoryResult<unknown[]>> {
+    let r = await this.pageOnce(address, q);
+    for (let i = 0; i < this.pacing.retries429 && !r.ok && r.detail === "HTTP 429"; i++) {
+      await this.pacing.sleep(this.pacing.backoffMs * 2 ** i);
+      r = await this.pageOnce(address, q);
+    }
+    return r;
+  }
+
+  private async pageOnce(address: string, q: { type?: "SWAP" | "TRANSFER"; gteTime?: number; lteTime?: number; beforeSignature?: string; limit?: number }): Promise<HistoryResult<unknown[]>> {
     if (!(await this.limiter.acquire(Priority.DISCOVERY, 120_000))) return { ok: false, code: "RATE_LIMITED", detail: "local budget" };
+    const wait = this.lastCallAt + this.pacing.minIntervalMs - this.pacing.nowMs();
+    if (wait > 0) await this.pacing.sleep(wait);
+    this.lastCallAt = this.pacing.nowMs();
     const p = new URLSearchParams({ "api-key": this.apiKey, limit: String(q.limit ?? 100), commitment: "confirmed" });
     if (q.type) p.set("type", q.type);
     if (q.gteTime !== undefined) p.set("gte-time", String(q.gteTime));

@@ -27,8 +27,14 @@ if (s.t0) throw new Error("session already started; the wallet list is frozen fo
 
 const transport = new ReadOnlyTransport(fetch as never, systemClock, 30_000);
 const jup = new JupiterClient(transport, new SlidingWindowLimiter(systemClock, 50), env.jupiterApiKey);
-// Helius Free: Enhanced API 2 req/s -> stay at 100/min
-const helius = new HeliusEnhanced(transport, new SlidingWindowLimiter(systemClock, 100, 1), env.heliusApiKey);
+// Helius Free: Enhanced API 2 req/s -> stay at 100/min, evenly spaced, 429s retried with back-off
+const helius = new HeliusEnhanced(transport, new SlidingWindowLimiter(systemClock, 100, 1), env.heliusApiKey, undefined, {
+  minIntervalMs: 600,
+  retries429: 4,
+  backoffMs: 2_000,
+  sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+  nowMs: () => Date.now(),
+});
 const rpc = new HeliusRpc(transport, new SlidingWindowLimiter(systemClock, 300, 1), env.rpc.url, env.rpc.supportsDas);
 const fx = new BinanceMinuteFx(transport);
 

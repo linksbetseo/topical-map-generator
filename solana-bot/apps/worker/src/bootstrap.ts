@@ -44,6 +44,8 @@ export interface BootstrapSummary {
   heliusCalls: number;
   binanceCalls: number;
   stoppedByBudget: boolean;
+  /** Wallet histories that could not be fetched, by provider error code (rejected as coverage unknown). */
+  historyErrors: Record<string, number>;
   populationNote: string;
 }
 
@@ -156,6 +158,7 @@ export async function runBootstrap(d: BootstrapDeps, sessionId: string, o: Boots
   const allBuys: Buy[] = [];
   let processed = 0;
   let stoppedByBudget = false;
+  const historyErrors: Record<string, number> = {};
   const openMints = new Set<string>();
   const perWallet = new Map<string, { events: WalletEvent[]; truncated: boolean; unpriced: number }>();
 
@@ -172,6 +175,8 @@ export async function runBootstrap(d: BootstrapDeps, sessionId: string, o: Boots
     const h = await d.helius.history(wallet, { type: "SWAP", gteTime: window.gte, lteTime: window.lte, maxPages: o.walletMaxPages });
     processed++;
     if (!h.ok) {
+      historyErrors[h.code] = (historyErrors[h.code] ?? 0) + 1;
+      d.log(`wallet ${wallet}: history ${h.code} ${h.detail}`);
       perWallet.set(wallet, { events: [], truncated: true, unpriced: 0 });
       continue;
     }
@@ -260,6 +265,7 @@ export async function runBootstrap(d: BootstrapDeps, sessionId: string, o: Boots
     heliusCalls: d.helius.calls,
     binanceCalls: d.fx.calls,
     stoppedByBudget,
+    historyErrors,
     populationNote: "Kandydaci = płacący opłatę kupujący obserwowanych tokenów z ostatnich godzin; populacja nie jest reprezentatywna dla całego rynku. Historia tylko swapów (type=SWAP); przelewy tylko dla powiązań.",
   };
   await d.pool.query(`INSERT INTO audit_events (session_id, actor, action, data, at) VALUES ($1,'worker','WALLET_BOOTSTRAP',$2,$3)`, [sessionId, json(summary), d.now()]);

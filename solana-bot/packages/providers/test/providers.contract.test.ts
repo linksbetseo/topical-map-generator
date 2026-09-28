@@ -339,4 +339,43 @@ describe("Helius Enhanced history pagination", () => {
     expect(r.ok && r.value.truncated).toBe(true);
     expect(r.ok && r.value.txs).toHaveLength(100);
   });
+
+  it("spaces calls evenly and retries a 429 with back-off", async () => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    let n = 0;
+    const { f, calls } = fakeFetch(() => (++n <= 2 ? { status: 429, body: "slow down" } : { status: 200, body: [] }));
+    const slept: number[] = [];
+    let now = 0;
+    const h = new HeliusEnhanced(new ReadOnlyTransport(f, clock), new SlidingWindowLimiter(clock, 100), "k", undefined, {
+      minIntervalMs: 600,
+      retries429: 4,
+      backoffMs: 2_000,
+      sleep: async (ms) => {
+        slept.push(ms);
+        now += ms;
+      },
+      nowMs: () => now,
+    });
+    const r = await h.history("W", q);
+    expect(r).toEqual({ ok: true, value: { txs: [], truncated: false } });
+    expect(calls).toHaveLength(3);
+    // back-off 2s, then (gap already > 600 ms) no extra spacing; back-off 4s
+    expect(slept).toEqual([2_000, 4_000]);
+  });
+
+  it("reports a 429 once retries are exhausted", async () => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    const { f, calls } = fakeFetch(() => ({ status: 429, body: "" }));
+    const h = new HeliusEnhanced(new ReadOnlyTransport(f, clock), new SlidingWindowLimiter(clock, 100), "k", undefined, {
+      minIntervalMs: 0,
+      retries429: 2,
+      backoffMs: 1,
+      sleep: async () => undefined,
+      nowMs: () => 0,
+    });
+    const r = await h.history("W", q);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("RATE_LIMITED");
+    expect(calls).toHaveLength(3);
+  });
 });
