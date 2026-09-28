@@ -39,6 +39,9 @@ export interface Reconstruction {
   swapEventsUnknownUsd: number;
 }
 
+/** An episode is closed when the remaining quantity is at most 0.1% of its peak (provider amounts are UI floats). */
+export const EPISODE_DUST_FRACTION_DENOM = 1_000n;
+
 /**
  * Episodes: from zero position to back to zero (or dust), all buys/sells included.
  * Open positions at T0 use a conservative mark (if given) else a zero lower bound, so unsold losses count.
@@ -59,6 +62,8 @@ export function reconstructEpisodes(events: readonly WalletEvent[], t0: Date, ma
 
   for (const list of byKey.values()) {
     let qty = 0n;
+    let peak = 0n;
+    const isDust = (q: bigint) => q <= dustRaw || (peak > 0n && q * EPISODE_DUST_FRACTION_DENOM <= peak);
     let cur: { start: Date; cost: Dec; proceeds: Dec; unknown: boolean } | null = null;
     for (const e of list) {
       if (e.kind === "SWAP_BUY" || e.kind === "SWAP_SELL") {
@@ -66,8 +71,10 @@ export function reconstructEpisodes(events: readonly WalletEvent[], t0: Date, ma
         if (e.usd === null) swapEventsUnknownUsd++;
         else swapVolumeUsdKnown = swapVolumeUsdKnown.add(e.usd);
       }
-      if (qty <= dustRaw && (e.kind === "SWAP_BUY" || e.kind === "TRANSFER_IN")) {
+      if (!cur && (e.kind === "SWAP_BUY" || e.kind === "TRANSFER_IN")) {
         cur = { start: e.blockTime, cost: new D(0), proceeds: new D(0), unknown: false };
+        qty = 0n;
+        peak = 0n;
       }
       if (!cur) {
         // selling something we never saw acquired: history incomplete for this pair
@@ -93,7 +100,8 @@ export function reconstructEpisodes(events: readonly WalletEvent[], t0: Date, ma
           cur.unknown = true; // tokens left without proceeds: cannot be scored
           break;
       }
-      if (qty <= dustRaw) {
+      if (qty > peak) peak = qty;
+      if (isDust(qty)) {
         episodes.push({
           wallet: e.wallet,
           mint: e.mint,
@@ -106,9 +114,10 @@ export function reconstructEpisodes(events: readonly WalletEvent[], t0: Date, ma
         });
         cur = null;
         qty = 0n;
+        peak = 0n;
       }
     }
-    if (cur && qty > dustRaw) {
+    if (cur && !isDust(qty)) {
       const first = list[0]!;
       const mark = marksUsdPerRaw.get(first.mint);
       const openValue = mark ? mark.mul(qty.toString()) : new D(0);

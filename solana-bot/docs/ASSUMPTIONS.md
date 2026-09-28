@@ -126,3 +126,8 @@ strategii/profilu i nowy `session_id`.
   `/order` bez `taker`, `slippageBps` = limit strony, `excludeRouters=jupiterz`. Powód: wyceny RFQ
   nie stosują slippage i nie pozwalają uzgodnić opłaty (patrz provider-contracts.md). Koszt: możliwe
   gorsze ceny na dużych parach (RFQ bywa lepsze o kilka bps) — świadomie wybrana weryfikowalność.
+* **A34** Okno kwalifikacji = 30 dni przed chwilą obliczenia bootstrapu (tuż przed T0). Historyczne
+  kursy: Binance 1m, cena *open* minuty zawierającej transakcję (znana w chwili transakcji), USDT≈USD.
+  Epizod zamknięty, gdy zostaje ≤ 0,1% szczytowej ilości (kwoty dostawcy są liczbami UI).
+  Portfel z uciętą historią (limit stron) → REJECTED (pokrycie nieznane).
+* **A35** Domyślnie `max_open_positions = 3` (decyzja właściciela; mieści się w budżecie Jupiter Free).

@@ -255,3 +255,28 @@ describe("exit rules", () => {
     expect(e.exit && e.code).toBe(ReasonCode.EXIT_SESSION_END);
   });
 });
+
+describe("episode dust (provider UI float amounts)", () => {
+  it("a sell leaving <= 0.1% of the peak closes the episode", () => {
+    const t = new Date(T0.getTime() - 3 * day);
+    const ev: WalletEvent[] = [
+      { wallet: "W", mint: "F", blockTime: t, availableAt: t, kind: "SWAP_BUY", tokenRaw: 1_000_000_000n, usd: new D(100), signature: "b" },
+      { wallet: "W", mint: "F", blockTime: new Date(t.getTime() + 60_000), availableAt: t, kind: "SWAP_SELL", tokenRaw: 999_999_999n, usd: new D(130), signature: "s" },
+    ];
+    const r = reconstructEpisodes(ev, T0, new Map());
+    expect(r.episodes).toHaveLength(1);
+    expect(r.episodes[0]!.status).toBe("CLOSED");
+    expect(r.episodes[0]!.pnlUsd!.toString()).toBe("30");
+  });
+
+  it("a partial sell (> 0.1% left) keeps the episode open and counts it at the zero lower bound", () => {
+    const t = new Date(T0.getTime() - 3 * day);
+    const ev: WalletEvent[] = [
+      { wallet: "W", mint: "F", blockTime: t, availableAt: t, kind: "SWAP_BUY", tokenRaw: 1_000n, usd: new D(100), signature: "b" },
+      { wallet: "W", mint: "F", blockTime: new Date(t.getTime() + 60_000), availableAt: t, kind: "SWAP_SELL", tokenRaw: 500n, usd: new D(70), signature: "s" },
+    ];
+    const r = reconstructEpisodes(ev, T0, new Map());
+    expect(r.episodes[0]!.status).toBe("OPEN_ZERO_LOWER_BOUND");
+    expect(r.episodes[0]!.pnlUsd!.toString()).toBe("-30");
+  });
+});

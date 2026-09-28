@@ -18,6 +18,21 @@ tu obiecywany. Proponowany układ w jednym projekcie Railway:
   równym `HELIUS_WEBHOOK_AUTH`.
 * **Nigdy** nie ustawiaj zmiennych z kluczem prywatnym — proces odmówi startu.
 
+### Kolejność uruchomienia na Railway (gotowe pliki: `deploy/railway.api.json`, `deploy/railway.worker.json`)
+
+1. Railway → New Project → Deploy from GitHub → repo `linksbetseo/topical-map-generator`, gałąź
+   `claude/solana-paper-trading-bot-2zfi7t`.
+2. Serwis **api**: Settings → Root Directory `solana-bot`, Config-as-code path `deploy/railway.api.json`,
+   Networking → Generate Domain. Serwis **worker**: ten sam root, `deploy/railway.worker.json`.
+3. Dodaj **PostgreSQL** (plugin) i w obu serwisach `DATABASE_URL=${{Postgres.DATABASE_URL}}`.
+4. Zmienne (obie usługi): `JUPITER_API_KEY`, `HELIUS_API_KEY`, `HELIUS_WEBHOOK_AUTH`, `OWNER_API_TOKEN`,
+   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `MODE=PAPER`, `LIVE_ENABLED=false`. Nigdy klucza portfela.
+5. Po starcie: `POST /api/sessions {"kind":"CONFLUENCE","mode":"PAPER"}` → w serwisie worker (Railway
+   shell / one-off) `pnpm --filter @solbot/worker bootstrap-wallets <sessionId>` →
+   `API_PUBLIC_URL=https://<api-domain> pnpm --filter @solbot/worker register-webhook <sessionId>` →
+   `POST /api/sessions/:id/validate` → worker zbiera 30 min danych → `POST /api/sessions/:id/start`.
+   Bootstrap uruchamiaj tuż przed startem — lista portfeli jest zamrażana na 7 dni.
+
 ## Heartbeat zewnętrzny
 
 Martwy worker nie wyśle sam alarmu. `GET /health/ready` zwraca 503, gdy ostatni heartbeat

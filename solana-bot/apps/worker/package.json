@@ -9,6 +9,8 @@
   "scripts": {
     "check-providers": "tsx src/check-providers.ts",
     "check-token": "tsx src/check-token.ts",
+    "bootstrap-wallets": "tsx src/bootstrap-cli.ts",
+    "register-webhook": "tsx src/register-webhook.ts",
     "start": "tsx src/main.ts"
   },
   "dependencies": {

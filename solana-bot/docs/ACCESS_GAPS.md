@@ -1,5 +1,11 @@
 # Rzeczywiste braki dostępu i danych
 
+> **G4 rozwiązane (2026-09-28):** historia portfeli = Helius Enhanced Transactions (`type=SWAP`,
+> 30 dni), wycena nóg SOL/USDC = Binance public 1-min klines (`SOLUSDT`, `USDCUSDT`, bez klucza;
+> założenie USDT≈USD). Kandydaci = kupujący tokenów z Jupiter toptraded (bez selekcji po zyskach).
+> Próbny przebieg na żywo: 6 kandydatów, 0 zakwalifikowanych (m.in. bot arbitrażowy) — pełny
+> bootstrap uruchamiać tuż przed T0. Koszt kredytów Helius Enhanced API — do potwierdzenia w panelu.
+>
 > **Stan 2026-09-28 (później):** G1–G3 rozwiązane — sieć odblokowana, klucze Jupiter (Free) i Helius
 > (Free) zweryfikowane read-only na mainnet, Telegram działa. Nadal otwarte: **G4** (historia portfeli
 > z historycznymi cenami USD), **G5** (publiczny HTTPS dla webhooka), G6–G8.
