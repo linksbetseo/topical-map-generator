@@ -14,7 +14,8 @@
     "start": "tsx src/main.ts",
     "diagnose-wallets": "tsx src/diagnose-cli.ts",
     "replay-wallet": "tsx src/replay-cli.ts",
-    "replay-confluence": "tsx src/confluence-replay-cli.ts"
+    "replay-confluence": "tsx src/confluence-replay-cli.ts",
+    "experiments": "tsx src/experiments-cli.ts"
   },
   "dependencies": {
     "@solbot/brokers": "workspace:*",
