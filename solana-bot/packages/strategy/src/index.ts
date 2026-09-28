@@ -7,3 +7,4 @@ export * from "./exits.ts";
 
 export const STRATEGY_NAME = "confluence_v1";
 export const STRATEGY_VERSION = "1.0.0";
+export * from "./copy-replay.ts";
