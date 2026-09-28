@@ -2,7 +2,7 @@
   "experiment": {
     "strategy": "confluence_v1",
     "strategy_version": "1.0.0",
-    "execution_profile": "jupiter_order_manual_v1",
+    "execution_profile": "jupiter_order_manual_norfq_v1",
     "duration_hours": 168,
     "entry_cutoff_before_end_hours": 4,
     "settlement_max_minutes": 30

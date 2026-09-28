@@ -18,7 +18,7 @@ export type ScriptStep =
 
 export class ScriptedQuoteProvider implements QuoteProvider {
   readonly name = "fixture";
-  readonly profile = "jupiter_order_manual_v1";
+  readonly profile = "jupiter_order_manual_norfq_v1";
   readonly calls: QuoteRequest[] = [];
   private readonly scripts = new Map<string, ScriptStep[]>();
 

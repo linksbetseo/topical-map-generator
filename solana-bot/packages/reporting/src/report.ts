@@ -11,7 +11,7 @@ import { maxDrawdown, percentile, tradeStats, type ClosedTrade, type TradeStats 
 export const BUILD_STATUS = {
   IMPLEMENTED: true,
   TESTED_WITH_FIXTURES: true,
-  VERIFIED_READ_ONLY_MAINNET: false,
+  VERIFIED_READ_ONLY_MAINNET: true,
   FORWARD_TEST_COMPLETED: false,
   LIVE_DISABLED: true,
 } as const;

@@ -8,6 +8,7 @@
   },
   "scripts": {
     "check-providers": "tsx src/check-providers.ts",
+    "check-token": "tsx src/check-token.ts",
     "start": "tsx src/main.ts"
   },
   "dependencies": {

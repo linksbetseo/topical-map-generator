@@ -1,0 +1,63 @@
+{
+ "fixture_origin": "recorded-live",
+ "recorded_at": "2026-09-28T07:06:06Z",
+ "source": "GET https://api.jup.ag/swap/v2/order (API key header, no taker) \u2014 response recorded verbatim except requestId",
+ "request": {
+  "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "outputMint": "So11111111111111111111111111111111111111112",
+  "amount": "25000000",
+  "slippageBps": 100,
+  "excludeRouters": "jupiterz"
+ },
+ "response": {
+  "swapType": "aggregator",
+  "inAmount": "25000000",
+  "outAmount": "210512468",
+  "otherAmountThreshold": "208407343",
+  "swapMode": "ExactIn",
+  "slippageBps": 100,
+  "priceImpactPct": "-0.00013529423726877835",
+  "routePlan": [
+   {
+    "percent": 100,
+    "bps": 10000,
+    "usdValue": 24.995517538243995,
+    "swapInfo": {
+     "ammKey": "8FnX3xo2yYw3EUE6w3nQA4GfXGS9wpK6oj3veJpbFzLo",
+     "label": "BisonFi",
+     "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "outputMint": "So11111111111111111111111111111111111111112",
+     "inAmount": "25000000",
+     "outAmount": "210554578"
+    }
+   }
+  ],
+  "feeMint": "So11111111111111111111111111111111111111112",
+  "feeBps": 2,
+  "platformFee": {
+   "feeBps": 2,
+   "feeMint": "So11111111111111111111111111111111111111112"
+  },
+  "signatureFeeLamports": 0,
+  "signatureFeePayer": null,
+  "prioritizationFeeLamports": 0,
+  "prioritizationFeePayer": null,
+  "rentFeeLamports": 0,
+  "rentFeePayer": null,
+  "transaction": null,
+  "gasless": false,
+  "jitOptimized": false,
+  "taker": null,
+  "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "outputMint": "So11111111111111111111111111111111111111112",
+  "router": "metis",
+  "guaranteedPrice": false,
+  "requestId": "redacted-request-id",
+  "inUsdValue": 24.995517538243995,
+  "outUsdValue": 24.99213578876352,
+  "swapUsdValue": 24.995517538243995,
+  "priceImpact": -0.013529423726877834,
+  "mode": "manual",
+  "totalTime": 42
+ }
+}

@@ -266,3 +266,47 @@ describe("keyless holders via getProgramAccounts (public RPC)", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("Jupiter /order — recorded live responses (2026-09-28, no taker)", () => {
+  it("buy USDC->SOL: platformFee has no amount; outAmount is already net of feeBps", () => {
+    for (const name of ["jupiter-order-live-usdc-sol-1usdc.json", "jupiter-order-live-usdc-sol-25usdc.json"]) {
+      const f = fx(name);
+      expect(f.fixture_origin).toBe("recorded-live");
+      expect(f.response.platformFee.amount).toBeUndefined();
+      const r = normalizeJupiterOrder(f.response, reqOf(f), t);
+      if (!r.ok) throw new Error(`${name}: ${r.detail}`);
+      expect(r.quote.feeSemantics).toBe("OUTPUT_NET_OF_FEE");
+      expect(r.quote.outAmountNetRaw).toBe(BigInt(f.response.outAmount));
+      expect(r.quote.mode).toBe("manual");
+      expect(r.quote.executionFidelity).toBe("QUOTE_ONLY_NO_TAKER");
+      const feeBps = Number((r.quote.platformFeeRaw! * 10_000n) / r.quote.routeOutRaw);
+      expect(feeBps).toBeLessThanOrEqual(f.response.feeBps);
+    }
+  });
+
+  it("sell SOL->USDC: feeMint is the input mint, yet the fee is deducted from the output (multi-hop split)", () => {
+    const f = fx("jupiter-order-live-sol-usdc-0.2sol.json");
+    expect(f.response.feeMint).toBe(f.response.inputMint);
+    const r = normalizeJupiterOrder(f.response, reqOf(f), t);
+    if (!r.ok) throw new Error(r.detail);
+    expect(r.quote.feeSemantics).toBe("OUTPUT_NET_OF_FEE");
+    expect(r.quote.routeOutRaw - r.quote.outAmountNetRaw).toBe(r.quote.platformFeeRaw);
+  });
+
+  it("RFQ (jupiterz) firm quote is rejected: slippage not applied and fee not reconcilable", () => {
+    const f = fx("jupiter-order-live-rfq-100usdc.json");
+    expect(f.response.router).toBe("jupiterz");
+    const r = normalizeJupiterOrder(f.response, reqOf(f), t);
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.code).toBe(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED);
+  });
+
+  it("client excludes the RFQ router in the profile request", async () => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    const { f: ff, calls } = fakeFetch(() => ({ status: 200, body: fx("jupiter-order-live-usdc-sol-25usdc.json").response }));
+    const c = new JupiterClient(new ReadOnlyTransport(ff, clock), new SlidingWindowLimiter(clock, 60), "k");
+    const f = fx("jupiter-order-live-usdc-sol-25usdc.json");
+    expect((await c.quote(reqOf(f))).ok).toBe(true);
+    expect(new URL(calls[0]!.url).searchParams.get("excludeRouters")).toBe("jupiterz");
+  });
+});

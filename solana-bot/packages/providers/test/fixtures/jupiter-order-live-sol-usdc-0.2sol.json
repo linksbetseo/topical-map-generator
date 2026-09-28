@@ -1,0 +1,102 @@
+{
+ "fixture_origin": "recorded-live",
+ "recorded_at": "2026-09-28T07:06:25Z",
+ "source": "GET https://api.jup.ag/swap/v2/order (no taker); verbatim except request/quote ids",
+ "request": {
+  "amount": "200000000",
+  "slippageBps": 150,
+  "excludeRouters": "jupiterz",
+  "inputMint": "So11111111111111111111111111111111111111112",
+  "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+ },
+ "response": {
+  "swapType": "aggregator",
+  "inAmount": "200000000",
+  "outAmount": "23740208",
+  "otherAmountThreshold": "23384104",
+  "swapMode": "ExactIn",
+  "slippageBps": 150,
+  "priceImpactPct": "-0.0003540781738275783",
+  "routePlan": [
+   {
+    "percent": 9.49,
+    "bps": 949,
+    "usdValue": 2.2524487552840156,
+    "swapInfo": {
+     "ammKey": "2SgUGxYDczrB6wUzXHPJH65pNhWkEzNMEx3km4xTYUTC",
+     "label": "Invariant",
+     "inputMint": "So11111111111111111111111111111111111111112",
+     "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "inAmount": "18984207",
+     "outAmount": "2254270"
+    }
+   },
+   {
+    "percent": 23.8,
+    "bps": 2380,
+    "usdValue": 5.648923116518395,
+    "swapInfo": {
+     "ammKey": "AwaVyGAF3N6K4YRUJk55Ui1GquKhKdD6vTCmVvCzXpKf",
+     "label": "Raydium CLMM",
+     "inputMint": "So11111111111111111111111111111111111111112",
+     "outputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+     "inAmount": "47605241",
+     "outAmount": "4969755"
+    }
+   },
+   {
+    "percent": 100,
+    "bps": 10000,
+    "usdValue": 5.648923116518395,
+    "swapInfo": {
+     "ammKey": "GPah53U8YNAMmvfUrZ7gECCfc1mEkJ8PphxhNb7hjeSg",
+     "label": "DefiTuna",
+     "inputMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+     "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "inAmount": "4969755",
+     "outAmount": "5652445"
+    }
+   },
+   {
+    "percent": 66.71,
+    "bps": 6671,
+    "usdValue": 15.833599206005971,
+    "swapInfo": {
+     "ammKey": "FLckHLGMJy5gEoXWwcE68Nprde1D4araK4TGLw4pQq2n",
+     "label": "TesseraV",
+     "inputMint": "So11111111111111111111111111111111111111112",
+     "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "inAmount": "133410552",
+     "outAmount": "15838241"
+    }
+   }
+  ],
+  "feeMint": "So11111111111111111111111111111111111111112",
+  "feeBps": 2,
+  "platformFee": {
+   "feeBps": 2,
+   "feeMint": "So11111111111111111111111111111111111111112"
+  },
+  "signatureFeeLamports": 0,
+  "signatureFeePayer": null,
+  "prioritizationFeeLamports": 0,
+  "prioritizationFeePayer": null,
+  "rentFeeLamports": 0,
+  "rentFeePayer": null,
+  "transaction": null,
+  "gasless": false,
+  "jitOptimized": false,
+  "taker": null,
+  "inputMint": "So11111111111111111111111111111111111111112",
+  "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "router": "metis",
+  "guaranteedPrice": false,
+  "requestId": "redacted-request-id",
+  "inUsdValue": 23.743378089762903,
+  "outUsdValue": 23.734971077808382,
+  "swapUsdValue": 23.734971077808382,
+  "priceImpact": -0.03540781738275783,
+  "mode": "manual",
+  "totalTime": 42
+ }
+}

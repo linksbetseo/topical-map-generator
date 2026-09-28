@@ -1,0 +1,64 @@
+{
+ "fixture_origin": "recorded-live",
+ "recorded_at": "2026-09-28T07:06:25Z",
+ "source": "GET https://api.jup.ag/swap/v2/order (no taker); verbatim except request/quote ids",
+ "request": {
+  "amount": "100000000",
+  "slippageBps": 100,
+  "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "outputMint": "So11111111111111111111111111111111111111112"
+ },
+ "response": {
+  "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "outputMint": "So11111111111111111111111111111111111111112",
+  "inAmount": "100000000",
+  "outAmount": "842152781",
+  "otherAmountThreshold": "842152781",
+  "swapMode": "ExactIn",
+  "slippageBps": 0,
+  "priceImpactPct": "-0.00012568588849633128",
+  "routePlan": [
+   {
+    "percent": 100,
+    "bps": 10000,
+    "usdValue": 99.97794070636779,
+    "swapInfo": {
+     "ammKey": "7rhxnLV8C77o6d8oz26AgK8x8m5ePsdeRawjqvojbjnQ",
+     "label": "JupiterZ",
+     "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "outputMint": "So11111111111111111111111111111111111111112",
+     "inAmount": "100000000",
+     "outAmount": "842152781"
+    }
+   }
+  ],
+  "feeMint": "So11111111111111111111111111111111111111112",
+  "feeBps": 2,
+  "transaction": null,
+  "gasless": true,
+  "jitOptimized": false,
+  "signatureFeeLamports": 0,
+  "signatureFeePayer": null,
+  "prioritizationFeeLamports": 0,
+  "prioritizationFeePayer": null,
+  "rentFeeLamports": 0,
+  "rentFeePayer": null,
+  "requestId": "redacted-request-id",
+  "swapType": "rfq",
+  "router": "jupiterz",
+  "guaranteedPrice": true,
+  "quoteId": "redacted",
+  "maker": "redacted",
+  "taker": null,
+  "platformFee": {
+   "feeBps": 2,
+   "feeMint": "So11111111111111111111111111111111111111112"
+  },
+  "inUsdValue": 99.97794070636779,
+  "outUsdValue": 99.96537489006008,
+  "swapUsdValue": 99.97794070636779,
+  "priceImpact": -0.012568588849633128,
+  "mode": "manual",
+  "totalTime": 107
+ }
+}

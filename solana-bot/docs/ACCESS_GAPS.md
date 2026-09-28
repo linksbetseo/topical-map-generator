@@ -1,5 +1,9 @@
 # Rzeczywiste braki dostępu i danych
 
+> **Stan 2026-09-28 (później):** G1–G3 rozwiązane — sieć odblokowana, klucze Jupiter (Free) i Helius
+> (Free) zweryfikowane read-only na mainnet, Telegram działa. Nadal otwarte: **G4** (historia portfeli
+> z historycznymi cenami USD), **G5** (publiczny HTTPS dla webhooka), G6–G8.
+
 > Aktualizacja: klucze Jupiter i Helius są teraz **opcjonalne** dla PAPER w wariancie
 > `config/paper.keyless.json` (patrz ASSUMPTIONS A31–A32). Nadal potrzebne: dostęp do sieci (G1),
 > dane portfeli (G4) i odbiór zdarzeń portfeli (G5). Obserwowanie do 100 portfeli bez Helius

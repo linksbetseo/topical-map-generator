@@ -156,3 +156,37 @@ SKIPPED_NO_KEY helius.*
 `IMPLEMENTED`, `TESTED_WITH_FIXTURES`; **nie** `VERIFIED_READ_ONLY_MAINNET`.
 Pierwsze uruchomienie w środowisku z dostępem do sieci ma rozstrzygnąć semantykę `outAmount`
 vs opłata w mincie wyjściowym (normalizer i tak weryfikuje ją per odpowiedź).
+
+## Weryfikacja read-only na mainnet (2026-09-28, po odblokowaniu sieci)
+
+`NODE_USE_ENV_PROXY=1 pnpm --filter @solbot/worker check-providers` (klucze Jupiter Free + Helius Free):
+
+```
+VERIFIED_READ_ONLY_MAINNET  jupiter.price.v3 SOL,USDC          :: SOL≈118.84 USDC≈0.99983
+VERIFIED_READ_ONLY_MAINNET  jupiter.tokens.v2.recent            :: 30 tokens parsed, 0 rejected
+VERIFIED_READ_ONLY_MAINNET  jupiter.swap.v2.order (profil norfq):: metis, OUTPUT_NET_OF_FEE, 5/5 prób
+VERIFIED_READ_ONLY_MAINNET  rpc(helius).getAccountInfo USDC     :: SPL Token, decimals 6
+```
+
+`check-token` (Jupiter recent → Helius getAccountInfo + DAS getTokenAccounts → filtry v1) działa na żywo.
+Testowe powiadomienie Telegram wysłane.
+
+### Ustalenia z nagranych odpowiedzi (`test/fixtures/jupiter-order-live-*.json`, `fixture_origin: recorded-live`)
+
+1. `platformFee` **nie zawiera `amount`** — tylko `feeBps` i `feeMint` (dokumentacja podaje `amount`).
+2. `outAmount` jest **już pomniejszony o `feeBps`** względem sumy wyjść `routePlan` — zarówno przy
+   kupnie (feeMint = mint wyjściowy), jak i przy sprzedaży, gdzie `feeMint` wskazuje mint **wejściowy**.
+   Reguła normalizatora: `route_out − outAmount ≈ route_out × feeBps / 10 000` (±2 jednostki) →
+   `OUTPUT_NET_OF_FEE`; inaczej `QUOTE_SEMANTICS_UNRESOLVED` (blokada). Opłata nie jest odejmowana drugi raz.
+3. Bez `taker`: `signatureFeeLamports`, `prioritizationFeeLamports`, `rentFeeLamports` = 0,
+   `transaction = null` → koszty sieciowe PAPER pozostają modelem z konfiguracji (A14).
+4. Router **RFQ `jupiterz`** (wygrywa np. przy 100 USDC→SOL) zwraca w trybie `manual`
+   `slippageBps: 0`, `otherAmountThreshold == outAmount` i jeden krok trasy bez widocznej opłaty —
+   nie da się uzgodnić opłaty ani zastosować limitu slippage. Profil zmieniony na
+   **`jupiter_order_manual_norfq_v1`** (`excludeRouters=jupiterz`), ten sam dla PAPER i przyszłego LIVE.
+5. Poza metis pojawia się router `dflow`; ta sama reguła opłat obowiązuje.
+
+### Środowisko Claude Code
+
+Wbudowany `fetch` w Node nie czyta `HTTPS_PROXY`; w tym środowisku uruchamiaj procesy z
+`NODE_USE_ENV_PROXY=1` (Node ≥ 22.21). Lokalnie bez proxy nie jest potrzebne.

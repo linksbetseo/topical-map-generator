@@ -12,7 +12,7 @@ export const ConfigSchema = z.object({
   experiment: z.object({
     strategy: z.literal("confluence_v1").default("confluence_v1"),
     strategy_version: z.string().default("1.0.0"),
-    execution_profile: z.literal("jupiter_order_manual_v1").default("jupiter_order_manual_v1"),
+    execution_profile: z.literal("jupiter_order_manual_norfq_v1").default("jupiter_order_manual_norfq_v1"),
     duration_hours: z.number().int().positive().default(168),
     entry_cutoff_before_end_hours: z.number().int().nonnegative().default(4),
     settlement_max_minutes: z.number().int().positive().default(30),

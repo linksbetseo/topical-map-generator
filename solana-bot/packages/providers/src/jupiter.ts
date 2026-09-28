@@ -15,11 +15,11 @@ import { NetworkError, SendBlockedError, type HttpResult, type ReadOnlyTransport
 import { Priority, type SlidingWindowLimiter } from "./rate-limit.ts";
 
 /**
- * Jupiter Swap API v2 `/order` without `taker` (quote only), profile jupiter_order_manual_v1.
+ * Jupiter Swap API v2 `/order` without `taker` (quote only), profile jupiter_order_manual_norfq_v1.
  * Contract: jup-ag/docs openapi-spec/swap/v2/swap.yaml @ 956fe05 (2026-09-28). See docs/provider-contracts.md.
  */
 export const JUPITER_BASE_URL = "https://api.jup.ag";
-export const JUPITER_PROFILE = "jupiter_order_manual_v1";
+export const JUPITER_PROFILE = "jupiter_order_manual_norfq_v1";
 
 type Json = Record<string, unknown>;
 
@@ -97,42 +97,45 @@ export function normalizeJupiterOrder(body: unknown, req: QuoteRequest, t: { req
 
   let semantics: FeeSemantics;
   let outNet: bigint;
-  if (feeMint === outputMint) {
-    const diff = routeOut - outAmount;
-    if (diff < 0n) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, "outAmount exceeds route output", t, body);
-    if (platformFeeRaw !== null && platformFeeRaw > 0n) {
-      if (diff === platformFeeRaw) {
-        semantics = "OUTPUT_NET_OF_FEE";
-        outNet = outAmount;
-      } else if (diff === 0n) {
-        semantics = "OUTPUT_GROSS_ADJUSTED";
-        outNet = outAmount - platformFeeRaw;
-      } else {
-        return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `route_out-outAmount=${diff} matches neither 0 nor platformFee ${platformFeeRaw}`, t, body);
-      }
-    } else if (feeBps === 0 && diff === 0n) {
-      semantics = "NO_OUTPUT_MINT_FEE";
-      outNet = outAmount;
-    } else if (diff > 0n) {
-      semantics = "OUTPUT_NET_OF_FEE"; // fee amount derived from routePlan
-      outNet = outAmount;
-      platformFeeRaw = diff;
-    } else {
-      return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `feeBps ${feeBps} in output mint but fee amount unknown`, t, body);
-    }
-  } else if (feeMint === inputMint) {
-    const diff = inAmount - routeIn;
-    if (diff < 0n) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, "route input exceeds inAmount", t, body);
-    if (platformFeeRaw !== null && platformFeeRaw !== diff) {
-      return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `inAmount-route_in=${diff} != platformFee ${platformFeeRaw}`, t, body);
-    }
-    if (diff === 0n && feeBps > 0) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `feeBps ${feeBps} in input mint but no deduction visible`, t, body);
-    if (outAmount !== routeOut) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, "outAmount != route output with input-mint fee", t, body);
+  if (feeMint !== inputMint && feeMint !== outputMint) {
+    return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `feeMint ${feeMint} is neither input nor output`, t, body);
+  }
+  const inputDeduction = inAmount - routeIn;
+  const outputDeduction = routeOut - outAmount;
+  if (inputDeduction < 0n || outputDeduction < 0n) {
+    return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `route amounts exceed top-level amounts (in ${inputDeduction}, out ${outputDeduction})`, t, body);
+  }
+  if (inputDeduction > 0n && outputDeduction > 0n) {
+    return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, "fee deducted on both sides", t, body);
+  }
+  // platformFee.amount is documented but was absent in live responses (2026-09-28); honour it when present.
+  const expectedOnOutput = (routeOut * BigInt(feeBps)) / 10_000n;
+  const withinRounding = (x: bigint, y: bigint) => (x > y ? x - y : y - x) <= 2n;
+  if (outputDeduction > 0n) {
+    // Verified live (buy and sell, metis/dflow): outAmount = route output x (1 - feeBps), whatever feeMint says.
+    const ok = platformFeeRaw !== null ? outputDeduction === platformFeeRaw : withinRounding(outputDeduction, expectedOnOutput);
+    if (!ok) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `route_out-outAmount=${outputDeduction} != fee ${platformFeeRaw ?? expectedOnOutput} (feeBps ${feeBps})`, t, body);
+    semantics = "OUTPUT_NET_OF_FEE";
+    outNet = outAmount;
+    platformFeeRaw = outputDeduction;
+  } else if (inputDeduction > 0n) {
+    // Documented variant: fee taken from the input before routing; output already reflects it.
+    const expectedOnInput = (inAmount * BigInt(feeBps)) / 10_000n;
+    const ok = platformFeeRaw !== null ? inputDeduction === platformFeeRaw : withinRounding(inputDeduction, expectedOnInput);
+    if (!ok) return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `inAmount-route_in=${inputDeduction} != fee (feeBps ${feeBps})`, t, body);
     semantics = "NO_OUTPUT_MINT_FEE";
     outNet = outAmount;
-    platformFeeRaw = diff;
+    platformFeeRaw = inputDeduction;
+  } else if (feeBps === 0) {
+    semantics = "NO_OUTPUT_MINT_FEE";
+    outNet = outAmount;
+  } else if (platformFeeRaw !== null && platformFeeRaw > 0n && feeMint === outputMint) {
+    // Gross outAmount with an explicit fee amount: subtract exactly once.
+    semantics = "OUTPUT_GROSS_ADJUSTED";
+    outNet = outAmount - platformFeeRaw;
   } else {
-    return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `feeMint ${feeMint} is neither input nor output`, t, body);
+    // e.g. RFQ firm quotes: feeBps > 0 but no deduction visible in the route
+    return fail(ReasonCode.QUOTE_SEMANTICS_UNRESOLVED, `feeBps ${feeBps} but no deduction visible in routePlan`, t, body);
   }
 
   const lam = (k: string): bigint | null => {
@@ -230,6 +233,9 @@ export class JupiterClient implements QuoteProvider {
       amount: req.amountRaw.toString(),
       swapMode: "ExactIn",
       slippageBps: String(req.slippageBps),
+      // RFQ (jupiterz) quotes are firm prices without a route breakdown (slippageBps 0,
+      // threshold == outAmount; verified live 2026-09-28), so fees cannot be reconciled.
+      excludeRouters: "jupiterz",
     });
     if ("error" in res) return fail(res.error, res.detail, { requestedAt: res.at, receivedAt: res.at });
     const t = { requestedAt: res.requestedAt, receivedAt: res.receivedAt };

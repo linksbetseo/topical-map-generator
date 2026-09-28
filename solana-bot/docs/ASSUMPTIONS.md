@@ -121,3 +121,8 @@ strategii/profilu i nowy `session_id`.
   Profil `config/paper.keyless.json`: `max_open_positions=1` (~22/min). To zmiana parametru
   strategii (inny `config_hash`), nie obejście limitu. Wolniejszego odpytywania pozycji nie
   wprowadzono, bo osłabiłoby kontrolę wyjść.
+
+* **A33** (2026-09-28, dane z mainnetu) Profil wykonania: `jupiter_order_manual_norfq_v1` —
+  `/order` bez `taker`, `slippageBps` = limit strony, `excludeRouters=jupiterz`. Powód: wyceny RFQ
+  nie stosują slippage i nie pozwalają uzgodnić opłaty (patrz provider-contracts.md). Koszt: możliwe
+  gorsze ceny na dużych parach (RFQ bywa lepsze o kilka bps) — świadomie wybrana weryfikowalność.

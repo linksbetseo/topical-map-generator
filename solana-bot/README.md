@@ -10,7 +10,7 @@ Stan gotowości:
 |---|---|
 | IMPLEMENTED | tak (etapy A–D, bez panelu web) |
 | TESTED_WITH_FIXTURES | tak — `pnpm test` (unit + Postgres) |
-| VERIFIED_READ_ONLY_MAINNET | **nie** — brak kluczy i blokada sieci w środowisku deweloperskim (`docs/ACCESS_GAPS.md`) |
+| VERIFIED_READ_ONLY_MAINNET | **tak** (2026-09-28): Jupiter price/tokens/order, Helius RPC + DAS, Telegram — `docs/provider-contracts.md` |
 | FORWARD_TEST_COMPLETED | **nie** |
 | LIVE_DISABLED | tak |
 
@@ -63,8 +63,8 @@ Weryfikacja read-only mainnet (nie wysyła transakcji):
 pnpm --filter @solbot/worker check-providers
 ```
 
-Oczekiwany wynik przy działającej sieci i kluczach: każda linia `VERIFIED_READ_ONLY_MAINNET`.
-W tej sesji implementacyjnej wszystkie wywołania zwróciły 403 z proxy środowiska.
+Oczekiwany wynik: każda linia `VERIFIED_READ_ONLY_MAINNET`. Filtry na żywym tokenie:
+`pnpm --filter @solbot/worker check-token [mint]`. W środowisku Claude Code dodaj `NODE_USE_ENV_PROXY=1`.
 
 Procesy:
 
