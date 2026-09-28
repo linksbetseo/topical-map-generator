@@ -84,6 +84,13 @@ describe("REPRODUCTION: legacy transfer-list normalizer vs balance changes (main
     expect(e.base.solLamports).toBe(-500_000n);
   });
 
+  it("a version-1 transaction (new format, requires maxSupportedTransactionVersion 1) is read like any other", () => {
+    const x = fx("rpc-v1-transaction.json") as CompactTxLike;
+    expect(x.accountKeys[0]).toBe("2BgzoYwUn36BWjnF9R3qpZwYvMnmurwRx8Y6gkhS4835");
+    expect(x.accountKeys).toHaveLength(x.preBalances.length);
+    expect(walletTxEffect(x, x.accountKeys[0]!).cls).not.toBe("NOT_INVOLVED");
+  });
+
   it("a real Jupiter USDC buy is one BUY with integer amounts", () => {
     const buy = fx("rpc-jupiter-usdc-buy.json") as CompactTxLike;
     const e = walletTxEffect(buy, buy.accountKeys[0]!);

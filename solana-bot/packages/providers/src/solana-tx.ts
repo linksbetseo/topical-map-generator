@@ -198,7 +198,7 @@ export class SolanaHistory {
     const worker = async () => {
       while (idx < todo.length) {
         const sig = todo[idx++]!;
-        const r = await this.call<RpcTransaction | null>("getTransaction", [sig, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]);
+        const r = await this.call<RpcTransaction | null>("getTransaction", [sig, { encoding: "jsonParsed", maxSupportedTransactionVersion: 1, commitment: "confirmed" }]);
         if (!r.ok) {
           errors.set(sig, `${r.code} ${r.detail}`);
           continue;
