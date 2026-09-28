@@ -53,9 +53,32 @@ export interface Candle {
   v_usd?: number;
 }
 
+/** Documented CU cost per request (data.birdeye.so/docs/guides/what-is-compute-unit-cost, 2026-09-28). */
+export function birdeyeCu(path: string, returnedItems: number): number {
+  if (path === "/trader/txs/seek_by_time") return 10;
+  if (path === "/trader/gainers-losers" || path === "/defi/v2/tokens/top_traders") return 25;
+  if (path === "/defi/v3/ohlcv") return returnedItems <= 100 ? 12 : returnedItems <= 300 ? 25 : returnedItems <= 1000 ? 40 : returnedItems <= 2000 ? 75 : 100;
+  return 30;
+}
+
+export class BudgetExceededError extends Error {}
+
+export interface GainerRow {
+  address: string;
+  pnl: number;
+  realized_pnl: number;
+  unrealized_pnl: number;
+  volume: number;
+  trade_count: number;
+}
+
 export class BirdeyeClient {
   calls = 0;
   cacheHits = 0;
+  /** estimated compute units spent by this client (cache hits are free) */
+  cu = 0;
+  /** hard cap on estimated CU; a request that would start above it throws BudgetExceededError */
+  cuBudget = Number.POSITIVE_INFINITY;
   constructor(
     private readonly transport: ReadOnlyTransport,
     private readonly apiKey: string,
@@ -74,6 +97,7 @@ export class BirdeyeClient {
       this.cacheHits++;
       return { ok: true, value: hit as T, cached: true };
     }
+    if (this.cu >= this.cuBudget) throw new BudgetExceededError(`Birdeye CU budget ${this.cuBudget} reached`);
     let last: BirdeyeResult<T> = { ok: false, code: "PROVIDER_ERROR", detail: "not called" };
     for (let i = 0; i <= this.retry.attempts; i++) {
       if (i > 0) await this.retry.sleep(this.retry.backoffMs * 2 ** (i - 1));
@@ -106,6 +130,8 @@ export class BirdeyeClient {
         return { ok: false, code: "PROVIDER_ERROR", detail: "bad JSON" };
       }
       if (body.success === false || body.data === undefined) return { ok: false, code: "PROVIDER_ERROR", detail: String(body.message ?? "no data").slice(0, 160) };
+      const items = (body.data as { items?: unknown[] } | undefined)?.items;
+      this.cu += birdeyeCu(path, Array.isArray(items) ? items.length : 0);
       await this.cache.put(key, body.data);
       return { ok: true, value: body.data, cached: false };
     }
@@ -136,6 +162,12 @@ export class BirdeyeClient {
       if (reachedStart || !r.value.has_next || items.length === 0) return { ok: true, value: { trades, complete: true }, cached: cachedAll };
     }
     return { ok: true, value: { trades, complete: false }, cached: cachedAll };
+  }
+
+  /** Ranked traders for a window; raw lists are dominated by unrealized marks — filter before use. */
+  async gainers(q: { type: "today" | "yesterday" | "1W" | "30d"; sortBy: "PnL" | "realized_pnl" | "unrealized_pnl" | "trader_score"; offset: number; limit: number; minTrade?: number }): Promise<BirdeyeResult<GainerRow[]>> {
+    const r = await this.get<{ items: GainerRow[] }>("/trader/gainers-losers", { type: q.type, sort_by: q.sortBy, sort_type: "desc", offset: q.offset, limit: q.limit, min_trade: q.minTrade });
+    return r.ok ? { ok: true, value: r.value.items ?? [], cached: r.cached } : r;
   }
 
   /** USD candles of a token (sparse: seconds without trades are absent). */
