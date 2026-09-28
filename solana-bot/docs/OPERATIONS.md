@@ -19,6 +19,16 @@ Zmienne ustawione w obu serwisach: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `O
 Utworzona sesja: `ses_0mul742nr6861f92f77548816` (`CONFLUENCE`, `PAPER`, stan `DRAFT`).
 Pozostało: bootstrap portfeli → rejestracja webhooka → validate → start (krok 5 poniżej).
 
+**Bootstrap na produkcji (2026-09-28)** uruchamiano jako tymczasowy serwis Railway `bootstrap`
+(ten sam obraz, sieć prywatna, bez wystawiania bazy; start command
+`sh -c 'pnpm --filter @solbot/worker bootstrap-wallets <id> && pnpm --filter @solbot/worker register-webhook <id>'`,
+restart `NEVER`; po przebiegu serwis usunięty, bo każdy push na gałąź uruchamiałby go ponownie).
+Wynik po poprawkach paginacji i tempa Helius: 129 kandydatów, 995 wywołań Helius, 1 błąd sieci,
+**0 zakwalifikowanych** (71 historii > 10 stron = boty HFT, 82 ujemny PnL, 87 profit factor < 1.2,
+100 < 20 tokenów). To wynik kryteriów, nie błąd — decyzja właściciela: szersza pula kandydatów
+(`BOOTSTRAP_SEED_MINTS`, `BOOTSTRAP_SEED_HOURS`) i/lub inne progi `wallets.*`. Webhooka nie
+zarejestrowano (brak portfeli).
+
 **Config-as-code (`railway.json`) jest na Railway wycofane** — API odrzuca ustawienie
 `railwayConfigFile`. Pliki `deploy/railway.*.json` służą teraz tylko jako opis; te same wartości
 (start command, healthcheck, restart policy) ustawiono bezpośrednio w ustawieniach serwisów.

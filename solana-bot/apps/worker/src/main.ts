@@ -41,7 +41,8 @@ if (!sessionId) {
 }
 const wallets = await new DbWalletBook(pool, sessionId).load();
 const flows = new DbFlowStore(pool, () => wallets.watched());
-const engine = new PaperEngine({ pool, clock: systemClock, cfg, sessionId, quotes: jup.withPriority(Priority.EXIT), market, flows, wallets, notifier, workerId: `worker-${process.pid}` });
+const workerId = `worker-${process.pid}`;
+const engine = new PaperEngine({ pool, clock: systemClock, cfg, sessionId, quotes: jup.withPriority(Priority.EXIT), market, flows, wallets, notifier, workerId });
 
 log(`worker started for ${sessionId}; recovered ${await engine.recover()} unresolved items`);
 let stop = false;
@@ -50,6 +51,7 @@ process.on("SIGINT", () => (stop = true));
 
 let lastTick = 0;
 let lastFx = 0;
+let lastBeat = 0;
 let lastEventCheck = new Date();
 while (!stop) {
   const now = Date.now();
@@ -57,6 +59,14 @@ while (!stop) {
     const s = await getSession(pool, sessionId);
     if (!s || s.state === SessionState.COMPLETED || s.state === SessionState.INCOMPLETE) break;
     if (!sessionManagesPositions(s.state)) {
+      // collecting mode before T0: engine.tick() is not running, so beat here for /health/ready
+      if (now - lastBeat >= 10_000) {
+        await pool.query(
+          `INSERT INTO heartbeats (worker_id, session_id, last_beat_at, started_at) VALUES ($1,$2,$3,$3) ON CONFLICT (worker_id) DO UPDATE SET last_beat_at=$3, session_id=$2`,
+          [workerId, sessionId, new Date(now)],
+        );
+        lastBeat = now;
+      }
       // collecting mode before T0: FX history for readiness (30 min healthy data)
       if (now - lastFx >= 30_000) {
         const fx = await market.fx(new Date());
