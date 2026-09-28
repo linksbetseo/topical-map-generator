@@ -11,7 +11,8 @@
     "check-token": "tsx src/check-token.ts",
     "bootstrap-wallets": "tsx src/bootstrap-cli.ts",
     "register-webhook": "tsx src/register-webhook.ts",
-    "start": "tsx src/main.ts"
+    "start": "tsx src/main.ts",
+    "diagnose-wallets": "tsx src/diagnose-cli.ts"
   },
   "dependencies": {
     "@solbot/brokers": "workspace:*",

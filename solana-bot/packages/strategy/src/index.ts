@@ -1,5 +1,6 @@
 export * from "./token-filters.ts";
 export * from "./wallets.ts";
+export * from "./balance-events.ts";
 export * from "./clusters.ts";
 export * from "./confluence.ts";
 export * from "./exits.ts";

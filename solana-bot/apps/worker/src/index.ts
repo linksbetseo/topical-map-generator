@@ -6,3 +6,4 @@ export * from "./live.ts";
 export * from "./telegram.ts";
 export * from "./readiness.ts";
 export * from "./bootstrap.ts";
+export * from "./diagnostics.ts";

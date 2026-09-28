@@ -5,6 +5,7 @@ import { configHash, type Config } from "@solbot/config";
 import { openingAllocation } from "@solbot/ledger";
 import { createSession, getSession, insertRawEvent, json, startSession, transitionSession, withTx, type Pool } from "@solbot/db";
 import { buildReport, toCsv, toHtml, toMarkdown } from "@solbot/reporting";
+import { diagnosticsCsv, type WalletDiagnostic } from "@solbot/worker";
 
 /**
  * Owner API. Every /api route except the provider webhook requires the owner bearer token.
@@ -126,6 +127,20 @@ export function buildApp(d: AppDeps): FastifyInstance {
     if (f === "csv") return reply.type("text/csv; charset=utf-8").send(toCsv(r));
     if (f === "html") return reply.type("text/html; charset=utf-8").header("content-security-policy", "default-src 'none'; style-src 'unsafe-inline'").send(toHtml(r));
     return r;
+  });
+
+  // P0 wallet diagnostics (read-only view of wallet_diagnostics); latest finished run unless ?run= is given
+  app.get<{ Params: { id: string }; Querystring: { run?: string; format?: string } }>("/api/sessions/:id/wallet-diagnostics", async (req, reply) => {
+    const run = (
+      await d.pool.query<{ run_id: string; params: unknown; summary: unknown; started_at: Date; finished_at: Date | null }>(
+        `SELECT run_id, params, summary, started_at, finished_at FROM wallet_diagnostic_runs WHERE session_id=$1 AND ($2::text IS NULL OR run_id=$2) AND ($2::text IS NOT NULL OR finished_at IS NOT NULL) ORDER BY started_at DESC LIMIT 1`,
+        [req.params.id, req.query.run ?? null],
+      )
+    ).rows[0];
+    if (!run) return reply.code(404).send({ error: "no diagnostics run" });
+    const records = (await d.pool.query<{ record: WalletDiagnostic }>(`SELECT record FROM wallet_diagnostics WHERE run_id=$1 ORDER BY primary_reason, address`, [run.run_id])).rows.map((r) => r.record);
+    if (req.query.format === "csv") return reply.type("text/csv; charset=utf-8").send(diagnosticsCsv(records));
+    return { run, records };
   });
 
   // SSE: session state, alerts and equity; polling DB so no extra infrastructure.
