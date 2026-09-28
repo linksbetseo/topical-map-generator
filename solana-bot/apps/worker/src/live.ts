@@ -1,7 +1,7 @@
 import { D, SPL_TOKEN_PROGRAM, TOKEN_2022_PROGRAM, USDC_MINT, WSOL_MINT, reason, ReasonCode, type Dec } from "@solbot/domain";
 import type { Config } from "@solbot/config";
 import type { FxSnapshot } from "@solbot/ledger";
-import { evaluateMintRisk, holderConcentration, parseMintAccount, Priority, type HeliusRpc, type JupiterClient, type TokenInfo } from "@solbot/providers";
+import { evaluateMintRisk, holderConcentration, tokenAccountsViaProgramAccounts, parseMintAccount, Priority, type HeliusRpc, type JupiterClient, type TokenInfo } from "@solbot/providers";
 import type { FlowEvent, HolderView, TokenView, WalletStatus } from "@solbot/strategy";
 import { json, type Pool } from "@solbot/db";
 import { normalizeEnhancedSwap, type EnhancedTxLike } from "./helius-flow.ts";
@@ -23,10 +23,17 @@ export class LiveMarketData implements MarketData {
     private readonly cfg: Config,
   ) {}
 
+  private fxCache: FxSnapshot | null = null;
+
+  /** Cached for 30 s (freshness limit for FX is 60 s) to save the request budget. */
   async fx(now: Date): Promise<FxSnapshot> {
+    if (this.fxCache && this.fxCache.usdcUsd && now.getTime() - this.fxCache.at.getTime() < 30_000) return this.fxCache;
     const r = await this.jup.withPriority(Priority.RECONCILE).usdPrices([WSOL_MINT, USDC_MINT]);
-    if (!r.ok) return { usdcUsd: null, solUsd: null, at: now, source: `jupiter.price.v3:${r.code}` };
-    return { usdcUsd: r.prices.get(USDC_MINT)?.usdPrice ?? null, solUsd: r.prices.get(WSOL_MINT)?.usdPrice ?? null, at: r.receivedAt, source: "jupiter.price.v3" };
+    if (r.ok) {
+      this.fxCache = { usdcUsd: r.prices.get(USDC_MINT)?.usdPrice ?? null, solUsd: r.prices.get(WSOL_MINT)?.usdPrice ?? null, at: r.receivedAt, source: "jupiter.price.v3" };
+      return this.fxCache;
+    }
+    return { usdcUsd: null, solUsd: null, at: now, source: `jupiter.price.v3:${r.code}` };
   }
 
   private async info(mint: string, now: Date): Promise<TokenInfo | null> {
@@ -82,7 +89,8 @@ export class LiveMarketData implements MarketData {
     if (!this.rpc) return null;
     const m = this.mintCache.get(mint);
     if (!m) return { ok: false, reasons: [reason(ReasonCode.HOLDER_DATA_UNAVAILABLE, "mint not read")], holderCount: 0, top10Bps: null, largestBps: null, availableAt: now };
-    const r = await this.rpc.getAllTokenAccounts(mint, { priority: Priority.ENTRY });
+    // Helius DAS when available; otherwise the standard getProgramAccounts (keyless public RPC)
+    const r = this.rpc.supportsDas ? await this.rpc.getAllTokenAccounts(mint, { priority: Priority.ENTRY }) : await tokenAccountsViaProgramAccounts(this.rpc, mint, m.program, Priority.ENTRY);
     if (!r.ok) return { ok: false, reasons: [reason(ReasonCode.HOLDER_DATA_UNAVAILABLE, r.code)], holderCount: 0, top10Bps: null, largestBps: null, availableAt: now };
     const infra = new Set((await this.pool.query<{ address: string }>(`SELECT address FROM infra_registry`)).rows.map((x) => x.address));
     const h = holderConcentration(r.value.accounts, m.supply, r.value.complete, infra);

@@ -79,7 +79,8 @@ export const ConfigSchema = z.object({
     max_open_positions: z.number().int().positive().default(4),
     max_exposure_equity_bps: bpsInt.default(2_000),
     max_entry_attempts_per_utc_day: z.number().int().positive().default(8),
-    max_entry_notional_per_utc_day_usd: usdString.default("200"),
+    /** Owner decision 2026-09-28: 100 USD per UTC day (brief default was 200). */
+    max_entry_notional_per_utc_day_usd: usdString.default("100"),
   }).prefault({}),
 
   exits: z.object({
@@ -160,4 +161,36 @@ export function parseConfig(input: unknown = {}): Config {
 
 export function configHash(config: Config): string {
   return sha256Hex(canonicalJson(config));
+}
+
+/** Keyless Jupiter access (per organisation/IP): 0.5 RPS = 30 requests per minute. */
+export const JUPITER_KEYLESS_RPS = 0.5;
+
+export interface JupiterBudget {
+  requiredPerMinute: number;
+  availablePerMinute: number;
+  ok: boolean;
+  breakdown: Record<string, number>;
+}
+
+/**
+ * Planned Jupiter load vs. what the plan allows (80% headroom). Position marks dominate:
+ * each open position needs one sell quote every `position_quote_ms`.
+ */
+export function jupiterBudget(cfg: Config, effectiveRps: number): JupiterBudget {
+  const perMin = (ms: number) => 60_000 / ms;
+  const breakdown = {
+    position_marks: cfg.sizing.max_open_positions * perMin(cfg.polling.position_quote_ms),
+    discovery_recent: perMin(cfg.polling.discovery_ms),
+    metadata_search: perMin(cfg.polling.metadata_ms),
+    fx_price: perMin(Math.max(30_000, cfg.freshness.fx_ms / 2)),
+    entry_attempt_burst: 5, // Q0, reverse, Q1, +5 s, +15 s
+  };
+  const requiredPerMinute = Math.ceil(Object.values(breakdown).reduce((a, b) => a + b, 0));
+  const availablePerMinute = Math.floor(effectiveRps * 60 * 0.8);
+  return { requiredPerMinute, availablePerMinute, ok: requiredPerMinute <= availablePerMinute, breakdown };
+}
+
+export function effectiveJupiterRps(cfg: Config, hasApiKey: boolean): number {
+  return hasApiKey ? cfg.budget.jupiter_rps : Math.min(cfg.budget.jupiter_rps, JUPITER_KEYLESS_RPS);
 }

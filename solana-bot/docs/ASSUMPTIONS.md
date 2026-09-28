@@ -106,3 +106,18 @@ strategii/profilu i nowy `session_id`.
 * **A28** Serializacja decyzji wejścia: `SELECT … FOR UPDATE` na wierszu sesji w tej samej
   transakcji co rezerwacja. Triggery sald (deferred) chronią dodatkowo przed błędem kodu.
 * **A29** `sessions.mode` w tym buildzie dopuszcza tylko `DEMO|PAPER|SHADOW` (CHECK w SQL).
+
+## Decyzje właściciela i praca bez kluczy (2026-09-28)
+
+* **A30** Dzienny limit notionalu zakupów = **100 USD** (brief: 200). Nowy domyślny `config_hash`.
+  Przy 25 USD na wejście to najwyżej 4 wejścia na dobę UTC (limit 8 prób pozostaje).
+* **A31** Klucze są opcjonalne tam, gdzie standardowe API wystarcza:
+  Jupiter bez klucza (Keyless, 0,5 RPS), Solana RPC publiczne (`api.mainnet-beta.solana.com`
+  albo `SOLANA_RPC_URL`) zamiast Helius. Holderzy bez Helius DAS: standardowe
+  `getProgramAccounts` (pełna lista kont → ta sama definicja koncentracji). Publiczne RPC może
+  odmówić dla dużych mintów → `HOLDER_DATA_UNAVAILABLE`, nigdy lista częściowa.
+* **A32** Budżet zapytań sprawdzany przed startem (`jupiterBudget`). Przy 4 pozycjach i quote co 5 s
+  potrzeba ~58 zapytań/min — nie mieści się ani Keyless (24/min z zapasem), ani Free (48/min).
+  Profil `config/paper.keyless.json`: `max_open_positions=1` (~22/min). To zmiana parametru
+  strategii (inny `config_hash`), nie obejście limitu. Wolniejszego odpytywania pozycji nie
+  wprowadzono, bo osłabiłoby kontrolę wyjść.

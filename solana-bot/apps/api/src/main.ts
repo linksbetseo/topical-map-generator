@@ -17,7 +17,7 @@ const pool = createPool(env.databaseUrl);
 await migrate(pool);
 const transport = new ReadOnlyTransport(fetch as never, systemClock);
 const jup = new JupiterClient(transport, new SlidingWindowLimiter(systemClock, 10), env.jupiterApiKey).withPriority(Priority.RECONCILE);
-const rpc = env.heliusApiKey ? new HeliusRpc(transport, new SlidingWindowLimiter(systemClock, 60), `https://mainnet.helius-rpc.com/?api-key=${env.heliusApiKey}`) : null;
+const rpc = new HeliusRpc(transport, new SlidingWindowLimiter(systemClock, 60), env.rpc.url, env.rpc.supportsDas);
 
 const app = buildApp({
   pool,
@@ -36,7 +36,6 @@ const app = buildApp({
         return q.ok ? { ok: true, detail: `order ok (${q.quote.router}, ${q.quote.feeSemantics})` } : { ok: false, detail: `${q.code}: ${q.detail}` };
       },
       canonicalUsdc: async () => {
-        if (!rpc) return { ok: false, detail: "HELIUS_API_KEY missing" };
         const r = await rpc.getAccountInfo(USDC_MINT, Priority.RECONCILE);
         if (!r.ok || !r.value) return { ok: false, detail: r.ok ? "not found" : r.code };
         const m = parseMintAccount(r.value.owner, r.value.data);

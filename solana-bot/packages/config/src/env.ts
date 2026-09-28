@@ -39,7 +39,11 @@ export interface RuntimeEnv {
   heliusWebhookAuth: string | null;
   telegramBotToken: string | null;
   telegramChatId: string | null;
+  /** Solana RPC: Helius when HELIUS_API_KEY is set, otherwise SOLANA_RPC_URL or the public mainnet endpoint (no key). */
+  rpc: { url: string; kind: "helius" | "public"; supportsDas: boolean };
 }
+
+export const PUBLIC_SOLANA_RPC = "https://api.mainnet-beta.solana.com";
 
 export function loadRuntimeEnv(env: Record<string, string | undefined> = process.env): RuntimeEnv {
   const modeRaw = env.MODE ?? Mode.PAPER;
@@ -78,6 +82,9 @@ export function loadRuntimeEnv(env: Record<string, string | undefined> = process
     heliusWebhookAuth: opt("HELIUS_WEBHOOK_AUTH"),
     telegramBotToken: opt("TELEGRAM_BOT_TOKEN"),
     telegramChatId: opt("TELEGRAM_CHAT_ID"),
+    rpc: opt("HELIUS_API_KEY")
+      ? { url: `https://mainnet.helius-rpc.com/?api-key=${opt("HELIUS_API_KEY")}`, kind: "helius", supportsDas: true }
+      : { url: opt("SOLANA_RPC_URL") ?? PUBLIC_SOLANA_RPC, kind: "public", supportsDas: false },
   };
 }
 

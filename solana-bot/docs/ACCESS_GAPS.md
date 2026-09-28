@@ -1,5 +1,11 @@
 # Rzeczywiste braki dostępu i danych
 
+> Aktualizacja: klucze Jupiter i Helius są teraz **opcjonalne** dla PAPER w wariancie
+> `config/paper.keyless.json` (patrz ASSUMPTIONS A31–A32). Nadal potrzebne: dostęp do sieci (G1),
+> dane portfeli (G4) i odbiór zdarzeń portfeli (G5). Obserwowanie do 100 portfeli bez Helius
+> (polling publicznego RPC) przekracza limity publicznego endpointu — dla `confluence_v1`
+> webhook Helius (plan Free, bez opłat, ale z kluczem) pozostaje praktycznie niezbędny.
+
 Stan na 2026-09-28 (sesja implementacyjna). Każdy punkt to realny bloker albo
 ograniczenie. Nic z tej listy nie zostało „obejście” danymi fikcyjnymi.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigurationError, configHash, findSignerSecrets, loadRuntimeEnv, parseConfig, redactUrl } from "../src/index.ts";
+import { ConfigurationError, configHash, effectiveJupiterRps, findSignerSecrets, jupiterBudget, loadRuntimeEnv, parseConfig, redactUrl } from "../src/index.ts";
 
 describe("config defaults follow the brief", () => {
   const c = parseConfig();
@@ -11,6 +11,7 @@ describe("config defaults follow the brief", () => {
     expect(c.sizing.max_open_positions).toBe(4);
     expect(c.sizing.max_exposure_equity_bps).toBe(2_000);
     expect(c.sizing.max_entry_attempts_per_utc_day).toBe(8);
+    expect(c.sizing.max_entry_notional_per_utc_day_usd).toBe("100"); // owner decision (brief: 200)
   });
   it("risk", () => {
     expect(c.risk.entry_slippage_bps).toBe(100);
@@ -65,5 +66,21 @@ describe("runtime env safety", () => {
 
   it("redacts api keys in URLs", () => {
     expect(redactUrl("https://mainnet.helius-rpc.com/?api-key=abc123&x=1")).toBe("https://mainnet.helius-rpc.com/?api-key=[REDACTED]&x=1");
+  });
+});
+
+describe("keyless operation", () => {
+  it("without HELIUS_API_KEY uses the public Solana RPC (no DAS); SOLANA_RPC_URL overrides", () => {
+    expect(loadRuntimeEnv({}).rpc).toEqual({ url: "https://api.mainnet-beta.solana.com", kind: "public", supportsDas: false });
+    expect(loadRuntimeEnv({ SOLANA_RPC_URL: "https://rpc.example" }).rpc.url).toBe("https://rpc.example");
+    expect(loadRuntimeEnv({ HELIUS_API_KEY: "abc" }).rpc).toMatchObject({ kind: "helius", supportsDas: true });
+  });
+
+  it("keyless Jupiter is capped at 0.5 RPS and the budget check reflects it", () => {
+    const def = parseConfig();
+    expect(effectiveJupiterRps(def, false)).toBe(0.5);
+    expect(effectiveJupiterRps(def, true)).toBe(1);
+    expect(jupiterBudget(def, 0.5)).toMatchObject({ requiredPerMinute: 58, availablePerMinute: 24, ok: false });
+    expect(jupiterBudget(parseConfig({ sizing: { max_open_positions: 1 }, budget: { jupiter_rps: 0.5 } }), 0.5).ok).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { findSignerSecrets, type Config } from "@solbot/config";
+import { effectiveJupiterRps, findSignerSecrets, jupiterBudget, type Config } from "@solbot/config";
 import { getSession, loadLedger, type Pool } from "@solbot/db";
 import { STRATEGY_VERSION } from "@solbot/strategy";
 
@@ -24,6 +24,13 @@ export async function readinessChecks(
   const s = await getSession(pool, sessionId);
   if (!s) return [{ name: "session", ok: false, detail: "not found" }];
 
+  const hasKey = !!env.JUPITER_API_KEY;
+  const budget = jupiterBudget(cfg, effectiveJupiterRps(cfg, hasKey));
+  checks.push({
+    name: "budżet zapytań Jupiter",
+    ok: budget.ok,
+    detail: `${hasKey ? "klucz" : "bez klucza"}: potrzeba ${budget.requiredPerMinute}/min, dostępne ${budget.availablePerMinute}/min (80% limitu)${budget.ok ? "" : " — zmniejsz max_open_positions albo użyj config/paper.keyless.json"}`,
+  });
   const secrets = findSignerSecrets(env);
   checks.push({ name: "brak sekretów signera / LIVE wyłączony", ok: secrets.length === 0, detail: secrets.length ? secrets.join(",") : "ok" });
   checks.push({ name: "wersja strategii", ok: s.strategy_version === STRATEGY_VERSION, detail: `${s.strategy_version} vs kod ${STRATEGY_VERSION}` });

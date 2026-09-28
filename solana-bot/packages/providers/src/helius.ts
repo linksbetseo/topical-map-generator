@@ -16,6 +16,8 @@ export class HeliusRpc {
     private readonly transport: ReadOnlyTransport,
     private readonly limiter: SlidingWindowLimiter,
     private readonly rpcUrl: string,
+    /** Helius DAS (getTokenAccounts) available; false for a plain Solana RPC endpoint. */
+    readonly supportsDas = true,
   ) {}
 
   async call<T>(method: string, params: unknown, priority: Priority, bigintKeys: ReadonlySet<string> = new Set()): Promise<RpcResult<T>> {
@@ -86,6 +88,58 @@ export class HeliusRpc {
     }
     return { ok: true, value: { accounts, lastIndexedSlot, complete: false }, receivedAt };
   }
+}
+
+/** Plain Solana RPC can serve every Helius call used here except DAS; holders then use getProgramAccounts. */
+export { HeliusRpc as SolanaRpc };
+
+const B58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function b58(bytes: Uint8Array): string {
+  let n = 0n;
+  for (const b of bytes) n = (n << 8n) + BigInt(b);
+  let out = "";
+  while (n > 0n) {
+    out = B58_ALPHABET[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  for (const b of bytes) {
+    if (b !== 0) break;
+    out = "1" + out;
+  }
+  return out;
+}
+
+/**
+ * Every token account of a mint via standard `getProgramAccounts` (no DAS, no API key).
+ * dataSlice returns owner (offset 32, 32 B) + amount (offset 64, u64 LE). Public endpoints may
+ * refuse this for large mints; a refusal is reported, never replaced by a partial list.
+ */
+export async function tokenAccountsViaProgramAccounts(
+  rpc: HeliusRpc,
+  mint: string,
+  tokenProgram: string,
+  priority: Priority = Priority.ENTRY,
+): Promise<RpcResult<{ accounts: Array<{ owner: string; amountRaw: bigint }>; lastIndexedSlot: number | null; complete: boolean }>> {
+  const filters: unknown[] = [{ memcmp: { offset: 0, bytes: mint } }];
+  if (tokenProgram === "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") filters.unshift({ dataSize: 165 });
+  const r = await rpc.call<{ context?: { slot: number }; value?: unknown[] } | unknown[]>(
+    "getProgramAccounts",
+    [tokenProgram, { encoding: "base64", commitment: "confirmed", withContext: true, dataSlice: { offset: 32, length: 40 }, filters }],
+    priority,
+  );
+  if (!r.ok) return r;
+  const list = Array.isArray(r.value) ? r.value : (r.value.value ?? []);
+  const slot = Array.isArray(r.value) ? null : (r.value.context?.slot ?? null);
+  const accounts: Array<{ owner: string; amountRaw: bigint }> = [];
+  for (const item of list as Array<{ account?: { data?: [string, string] } }>) {
+    const d = item.account?.data;
+    if (!Array.isArray(d) || d[1] !== "base64") return { ok: false, code: "PROVIDER_ERROR", detail: "unexpected account encoding" };
+    const bytes = new Uint8Array(Buffer.from(d[0], "base64"));
+    if (bytes.length !== 40) return { ok: false, code: "PROVIDER_ERROR", detail: `data slice length ${bytes.length}` };
+    const amount = new DataView(bytes.buffer, bytes.byteOffset, 40).getBigUint64(32, true);
+    accounts.push({ owner: b58(bytes.subarray(0, 32)), amountRaw: amount });
+  }
+  return { ok: true, value: { accounts, lastIndexedSlot: slot, complete: true }, receivedAt: r.receivedAt };
 }
 
 export interface HolderConcentration {

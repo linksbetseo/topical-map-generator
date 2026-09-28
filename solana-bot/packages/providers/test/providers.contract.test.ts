@@ -9,6 +9,7 @@ import {
   SendBlockedError,
   SlidingWindowLimiter,
   holderConcentration,
+  tokenAccountsViaProgramAccounts,
   normalizeJupiterOrder,
   parseJsonExact,
   parseTokenInfo,
@@ -229,5 +230,39 @@ describe("holders (owner-consolidated)", () => {
     expect(r.value.complete).toBe(true);
     expect(r.value.accounts.map((a) => a.amountRaw)).toEqual([18_446_744_073_709_551_615n, 1n, 2n]);
     expect(r.value.lastIndexedSlot).toBe(6);
+  });
+});
+
+describe("keyless holders via getProgramAccounts (public RPC)", () => {
+  it("decodes owner + u64 amount from a 40-byte data slice and sends the right filters", async () => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    const slice = (ownerByte: number, amount: bigint) => {
+      const b = new Uint8Array(40);
+      b.fill(ownerByte, 0, 32);
+      new DataView(b.buffer).setBigUint64(32, amount, true);
+      return Buffer.from(b).toString("base64");
+    };
+    let sent: { method: string; params: unknown[] } | null = null;
+    const { f: ff } = fakeFetch((_u, init) => {
+      sent = JSON.parse(init.body!);
+      return { status: 200, body: { jsonrpc: "2.0", id: 1, result: { context: { slot: 42 }, value: [{ pubkey: "a", account: { data: [slice(7, 18_446_744_073_709_551_615n), "base64"] } }, { pubkey: "b", account: { data: [slice(0, 5n), "base64"] } }] } } };
+    });
+    const rpc = new HeliusRpc(new ReadOnlyTransport(ff, clock), new SlidingWindowLimiter(clock, 120), "https://api.mainnet-beta.solana.com", false);
+    const r = await tokenAccountsViaProgramAccounts(rpc, "MintAddr", "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    if (!r.ok) throw new Error(r.detail);
+    expect(r.value.accounts[0]!.amountRaw).toBe(18_446_744_073_709_551_615n);
+    expect(r.value.accounts[1]!.owner).toBe("11111111111111111111111111111111");
+    expect(r.value.lastIndexedSlot).toBe(42);
+    expect(sent!.method).toBe("getProgramAccounts");
+    expect(JSON.stringify(sent!.params)).toContain('"dataSize":165');
+    expect(JSON.stringify(sent!.params)).toContain('"dataSlice":{"offset":32,"length":40}');
+  });
+
+  it("a refusal from the public RPC is reported, not replaced by partial data", async () => {
+    const clock = new FakeClock("2026-10-02T10:00:00Z");
+    const { f: ff } = fakeFetch(() => ({ status: 200, body: { jsonrpc: "2.0", id: 1, error: { code: -32010, message: "excluded from account secondary indexes" } } }));
+    const rpc = new HeliusRpc(new ReadOnlyTransport(ff, clock), new SlidingWindowLimiter(clock, 120), "https://api.mainnet-beta.solana.com", false);
+    const r = await tokenAccountsViaProgramAccounts(rpc, "MintAddr", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+    expect(r.ok).toBe(false);
   });
 });

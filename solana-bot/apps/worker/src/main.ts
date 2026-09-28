@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { SessionState, sessionManagesPositions, systemClock } from "@solbot/domain";
-import { loadRuntimeEnv, parseConfig, redactSecrets } from "@solbot/config";
+import { effectiveJupiterRps, jupiterBudget, loadRuntimeEnv, parseConfig, redactSecrets } from "@solbot/config";
 import { createPool, getSession, migrate } from "@solbot/db";
 import { HeliusRpc, JupiterClient, Priority, ReadOnlyTransport, SlidingWindowLimiter } from "@solbot/providers";
 import { PaperEngine } from "./engine.ts";
@@ -23,8 +23,12 @@ const pool = createPool(env.databaseUrl);
 await migrate(pool);
 
 const transport = new ReadOnlyTransport(fetch as never, systemClock, 10_000);
-const jup = new JupiterClient(transport, new SlidingWindowLimiter(systemClock, Math.floor(cfg.budget.jupiter_rps * 60)), env.jupiterApiKey);
-const rpc = env.heliusApiKey ? new HeliusRpc(transport, new SlidingWindowLimiter(systemClock, 300), `https://mainnet.helius-rpc.com/?api-key=${env.heliusApiKey}`) : null;
+const jup = new JupiterClient(transport, new SlidingWindowLimiter(systemClock, Math.floor(effectiveJupiterRps(cfg, !!env.jupiterApiKey) * 60)), env.jupiterApiKey);
+const budget = jupiterBudget(cfg, effectiveJupiterRps(cfg, !!env.jupiterApiKey));
+if (!budget.ok) log(`WARNING Jupiter budget: need ${budget.requiredPerMinute}/min, have ${budget.availablePerMinute}/min; readiness will block the start`);
+// no Helius key => public Solana RPC (no DAS; holders via getProgramAccounts; conservative rate)
+const rpc = new HeliusRpc(transport, new SlidingWindowLimiter(systemClock, env.rpc.kind === "helius" ? 300 : 120), env.rpc.url, env.rpc.supportsDas);
+log(`rpc: ${env.rpc.kind}, jupiter: ${env.jupiterApiKey ? "api key" : "keyless (0.5 RPS)"}`);
 const market = new LiveMarketData(pool, jup, rpc, cfg);
 const notifier = env.telegramBotToken && env.telegramChatId ? new TelegramNotifier(env.telegramBotToken, env.telegramChatId, fetch, log) : nullNotifier;
 

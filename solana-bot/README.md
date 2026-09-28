@@ -75,6 +75,15 @@ pnpm --filter @solbot/worker start    # worker: zbieranie danych, sygnały, pozy
 
 albo całość: `docker compose up --build`.
 
+## Praca bez kluczy API
+
+* Bez `JUPITER_API_KEY`: Jupiter Keyless (0,5 zapytania/s). Użyj `CONFIG_PATH=config/paper.keyless.json`
+  (1 otwarta pozycja) — domyślne 4 pozycje nie mieszczą się w budżecie i readiness zablokuje start.
+* Bez `HELIUS_API_KEY`: publiczne RPC Solany (albo własne `SOLANA_RPC_URL`); holderzy przez `getProgramAccounts`.
+* Klucz Helius (plan Free) jest nadal potrzebny do webhooka ze zdarzeniami obserwowanych portfeli
+  (sygnał `confluence_v1`). Sesja `INFRA_TEST` działa bez niego.
+* Dzienny limit zakupów: **100 USD** (decyzja właściciela).
+
 ## Przebieg eksperymentu
 
 Wszystkie wywołania z nagłówkiem `Authorization: Bearer $OWNER_API_TOKEN`.

@@ -78,9 +78,9 @@ describe("sizing", () => {
 
   it("daily attempt and notional limits", () => {
     expect(codes(evaluateEntry(cand, snap({ entryAttemptsToday: 8 }), cfg))).toContain(ReasonCode.DAILY_ATTEMPT_LIMIT);
-    const d = evaluateEntry(cand, snap({ entryNotionalTodayUsd: new D(195) }), cfg);
+    const d = evaluateEntry(cand, snap({ entryNotionalTodayUsd: new D(95) }), cfg);
     expect(codes(d)).toContain(ReasonCode.DAILY_NOTIONAL_LIMIT);
-    expect(evaluateEntry(cand, snap({ entryNotionalTodayUsd: new D(180) }), cfg).notionalUsd!.toString()).toBe("20");
+    expect(evaluateEntry(cand, snap({ entryNotionalTodayUsd: new D(80) }), cfg).notionalUsd!.toString()).toBe("20");
   });
 });
 
