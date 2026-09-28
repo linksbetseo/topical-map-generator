@@ -1,0 +1,17 @@
+{
+  "name": "@solbot/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@solbot/domain": "workspace:*",
+    "@solbot/ledger": "workspace:*",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@solbot/config": "workspace:*"
+  }
+}

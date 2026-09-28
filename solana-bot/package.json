@@ -1,0 +1,29 @@
+{
+  "name": "solbot",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:db": "vitest run --project db",
+    "db:migrate": "tsx packages/db/src/migrate-cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/pg": "^8.23.1",
+    "fast-check": "^4.10.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

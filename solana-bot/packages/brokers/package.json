@@ -1,0 +1,15 @@
+{
+  "name": "@solbot/brokers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@solbot/config": "workspace:*",
+    "@solbot/domain": "workspace:*",
+    "@solbot/ledger": "workspace:*",
+    "@solbot/providers": "workspace:*"
+  }
+}

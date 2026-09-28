@@ -1,0 +1,16 @@
+{
+  "name": "@solbot/providers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@solana-program/token-2022": "^0.19.0",
+    "@solana/kit": "^8.3.0"
+  },
+  "dependencies": {
+    "@solbot/domain": "workspace:*"
+  }
+}

@@ -94,3 +94,15 @@ strategii/profilu i nowy `session_id`.
   30 dni; krawędzie „wspólny funder” wymagają warunku (b) z briefu; funder o nieznanym
   charakterze → brak krawędzi, ale **też brak deklaracji niezależności**: portfel bez
   wykonanego sprawdzenia powiązań ma status `UNKNOWN` i nie liczy się do sygnału.
+
+## Baza danych
+
+* **A27** Migracje SQL są źródłem prawdy (`packages/db/migrations`), a dostęp przez `pg`
+  z zapytaniami parametryzowanymi. Drizzle (zaproponowany w briefie) jest **odłożony**:
+  kluczowe gwarancje (append-only, bilans per aktywo przy COMMIT, brak ujemnych sald,
+  jeden fill na próbę, niezmienność T0/konfiguracji) są w triggerach i ograniczeniach SQL,
+  których generator schematu nie wyraża. Typy `numeric` wracają jako string (parser pg),
+  nigdy jako JS float.
+* **A28** Serializacja decyzji wejścia: `SELECT … FOR UPDATE` na wierszu sesji w tej samej
+  transakcji co rezerwacja. Triggery sald (deferred) chronią dodatkowo przed błędem kodu.
+* **A29** `sessions.mode` w tym buildzie dopuszcza tylko `DEMO|PAPER|SHADOW` (CHECK w SQL).
