@@ -26,6 +26,8 @@ def run_variant(bars: list[BidAskBar], cfg: BotConfig, variant: str, signal_filt
     acc = engine.account
     result = {
         "variant": variant,
+        "strategy": engine.strategy.name,
+        "risk_per_trade_pct": cfg.risk.risk_per_trade_pct,
         "filter": (signal_filter or SignalFilter()).name,
         "initial_balance": cfg.risk.initial_balance,
         "final_balance": round(acc.balance, 2),
@@ -52,7 +54,7 @@ def run_variant(bars: list[BidAskBar], cfg: BotConfig, variant: str, signal_filt
     return result
 
 
-COMPARE_KEYS = ("trades", "net_pnl", "return_pct", "max_drawdown", "max_drawdown_pct", "avg_trade",
+COMPARE_KEYS = ("strategy", "risk_per_trade_pct", "trades", "net_pnl", "return_pct", "max_drawdown", "max_drawdown_pct", "avg_trade",
                 "win_rate_pct", "profit_factor", "commission", "swap")
 
 

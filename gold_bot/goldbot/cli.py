@@ -77,7 +77,10 @@ def _apply_overrides(cfg, args):
         risk = replace(risk, risk_per_trade_pct=args.risk_pct)
     if args.daily_loss_pct is not None:
         risk = replace(risk, max_daily_loss_pct=args.daily_loss_pct)
-    return replace(cfg, risk=risk)
+    strategy = cfg.strategy
+    if args.strategy:
+        strategy = replace(strategy, name=args.strategy)
+    return replace(cfg, risk=risk, strategy=strategy)
 
 
 def cmd_backtest(args):
@@ -177,6 +180,7 @@ def main(argv=None) -> int:
     p.add_argument("--ics", action="append", help="kalendarz ICS (np. BLS)")
     p.add_argument("--news", help="JSONL komunikatów dla filtra Jev")
     p.add_argument("--variant", choices=["A", "B", "AB"], default="A")
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1"], help="nadpisz strategy.name")
     p.add_argument("--risk-pct", type=float, help="nadpisz risk.risk_per_trade_pct")
     p.add_argument("--daily-loss-pct", type=float, help="nadpisz risk.max_daily_loss_pct")
     p.add_argument("--splits", type=int, default=3, help="liczba chronologicznych okresów w raporcie")

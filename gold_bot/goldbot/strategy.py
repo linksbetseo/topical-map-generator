@@ -6,6 +6,7 @@ są rentowne. Wszystkie obliczenia są w kodzie; żaden model językowy nie licz
 
 from __future__ import annotations
 
+from collections import deque
 from datetime import timedelta
 
 from goldbot.config import StrategyConfig
@@ -77,3 +78,64 @@ class TrendPullbackStrategy:
             reason=f"{self.name}: trend={trend}, RSI {prev_rsi:.1f}->{rsi:.1f}",
             features=features,
         )
+
+
+class BreakoutStrategy(TrendPullbackStrategy):
+    """Częstsze wejścia: zamknięcie M15 powyżej maksimum (poniżej minimum) ostatnich N świec
+    w kierunku trendu H1. Bez filtra H4, SL/TP z mnożników ATR z konfiguracji.
+
+    Więcej transakcji = więcej kosztów (spread + prowizja na każdej). To celowo "agresywny"
+    wariant do porównania, nie rekomendacja.
+    """
+
+    name = "breakout_v1"
+
+    def __init__(self, cfg: StrategyConfig):
+        super().__init__(cfg)
+        self.window: deque[Bar] = deque(maxlen=cfg.breakout_lookback)
+
+    def trend(self) -> str | None:
+        f, s = self.h1_fast.value, self.h1_slow.value
+        if f is None or s is None:
+            return None
+        return "up" if f > s else "down" if f < s else "flat"
+
+    def on_m15(self, bar: Bar) -> Signal | None:
+        rsi = self.rsi.update(bar.close)
+        atr = self.atr.update(bar.high, bar.low, bar.close)
+        trend = self.trend()
+        window = list(self.window)
+        self.window.append(bar)
+        if atr is None or trend is None or len(window) < self.cfg.breakout_lookback:
+            return None
+        if not (self.cfg.min_atr <= atr <= self.cfg.max_atr):
+            return None
+        hi, lo = max(b.high for b in window), min(b.low for b in window)
+        if hi - lo < self.cfg.breakout_min_range_atr * atr:
+            return None
+        side = None
+        if trend == "up" and bar.close > hi:
+            side = Side.LONG
+        elif trend == "down" and bar.close < lo:
+            side = Side.SHORT
+        if side is None:
+            return None
+        return Signal(
+            side=side,
+            sl_distance=self.cfg.sl_atr_mult * atr,
+            tp_distance=self.cfg.tp_atr_mult * atr,
+            decided_at=bar.time + timedelta(minutes=15),
+            reason=f"{self.name}: trend={trend}, close {bar.close:.2f} vs range {lo:.2f}-{hi:.2f}",
+            features={"rsi": round(rsi, 2) if rsi is not None else None, "atr": round(atr, 3), "trend": trend,
+                      "range_hi": hi, "range_lo": lo, "close": bar.close},
+        )
+
+
+STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy}
+
+
+def build_strategy(cfg: StrategyConfig) -> TrendPullbackStrategy:
+    try:
+        return STRATEGIES[cfg.name](cfg)
+    except KeyError:
+        raise ValueError(f"Nieznana strategia '{cfg.name}'. Dostępne: {sorted(STRATEGIES)}") from None

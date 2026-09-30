@@ -100,6 +100,28 @@ starcie trzeba zweryfikować pola i jednostki specyfikacji (patrz docstring w `g
 Przy 500 USD, 1% ryzyka i minimum 1 oz większość sygnałów zostanie odrzucona. To zamierzony,
 uczciwy wynik: `engine.rejected:*` w raporcie pokazuje, ile i dlaczego.
 
+## Dwie strategie i wariant agresywny
+
+| | `trend_pullback_v1` (`config.example.toml`) | `breakout_v1` (`config.aggressive.toml`) |
+|---|---|---|
+| wejście | korekta RSI na M15 w trendzie H1 **i** H4 | zamknięcie M15 poza zakresem ostatnich 8 świec, w kierunku trendu H1 |
+| SL / TP | 1,5 / 2,0 ATR | 1,0 / 1,5 ATR |
+| ryzyko na transakcję | 1% | 5% |
+| dzienny limit straty | 3% | 12% |
+| charakter | rzadkie wejścia, większość sygnałów odrzucana przy 500 USD | częste wejścia, więcej kosztów (spread + prowizja) |
+
+```bash
+python -m goldbot backtest --data data/xauusd_m1.csv --config config.aggressive.toml --events examples/fomc_2026.csv
+# ta sama strategia, inne ryzyko:
+python -m goldbot backtest --data data/xauusd_m1.csv --config config.aggressive.toml --risk-pct 2 --daily-loss-pct 6
+```
+
+Ryzyko 5% skaluje wynik, nie zmienia przewagi: seria 5 strat z rzędu to ok. −23% konta.
+Na danych syntetycznych (błądzenie losowe) `breakout_v1` daje wynik bliski zeru po kosztach
+z obsunięciem ~30% — dokładnie tak powinna wyglądać strategia bez przewagi. Wcześniejsza wersja
+generatora miała wielogodzinne „reżimy dryfu”, które ta strategia trywialnie wykorzystywała
+(+900 000%); to przypomnienie, że wynik na syntetyku nic nie mówi o rynku.
+
 ## Filtr Jev (wariant B)
 
 Model **klasyfikuje** komunikaty (`relevant_to_gold`, `category`), a **kod decyduje**: blokuje wejście,

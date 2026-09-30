@@ -1,0 +1,26 @@
+# Wariant agresywny: 5% ryzyka na transakcję, częste wejścia (breakout_v1).
+# Do porównania z config.example.toml na tych samych danych - nie rekomendacja.
+# Seria 5 strat = ok. -23% konta. Dzienny limit podniesiony, inaczej blokowałby po 1 stracie.
+
+[risk]
+initial_balance = 500.0
+risk_per_trade_pct = 5.0
+max_daily_loss_pct = 12.0
+max_open_positions = 1
+max_spread = 0.60
+max_margin_usage_pct = 80.0
+
+[strategy]
+name = "breakout_v1"
+h1_ema_fast = 20
+h1_ema_slow = 50
+use_h4 = false
+m15_atr_period = 14
+sl_atr_mult = 1.0
+tp_atr_mult = 1.5
+breakout_lookback = 8
+breakout_min_range_atr = 1.0
+
+[calendar]
+blackout_before_minutes = 30
+blackout_after_minutes = 15

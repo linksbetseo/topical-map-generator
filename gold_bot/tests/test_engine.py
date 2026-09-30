@@ -104,3 +104,23 @@ class EngineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BreakoutStrategyTest(unittest.TestCase):
+    def test_breakout_trades_more_often_than_pullback(self):
+        from dataclasses import replace
+        from goldbot.config import StrategyConfig
+        bars = generate(days=40, seed=3)
+        base = BotConfig(risk=RiskConfig(risk_per_trade_pct=5.0, max_daily_loss_pct=12.0))
+        a = run_variant(bars, base, "pullback")
+        b = run_variant(bars, replace(base, strategy=StrategyConfig(name="breakout_v1", use_h4=False,
+                                                                     sl_atr_mult=1.0, tp_atr_mult=1.5)), "breakout")
+        self.assertEqual(b["strategy"], "breakout_v1")
+        self.assertGreater(b["engine"]["signals"], a["engine"]["signals"])
+        self.assertAlmostEqual(b["final_balance"], 500 + b["net_pnl"], places=1)
+
+    def test_unknown_strategy_rejected(self):
+        from goldbot.config import StrategyConfig
+        from goldbot.strategy import build_strategy
+        with self.assertRaises(ValueError):
+            build_strategy(StrategyConfig(name="magic"))

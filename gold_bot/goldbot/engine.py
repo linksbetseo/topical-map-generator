@@ -22,7 +22,7 @@ from goldbot.journal import Journal
 from goldbot.models import BidAskBar, Side, Signal
 from goldbot.risk import size_position
 from goldbot.simulator import Account
-from goldbot.strategy import TrendPullbackStrategy
+from goldbot.strategy import TrendPullbackStrategy, build_strategy
 
 
 def _hm(s: str) -> time | None:
@@ -42,7 +42,7 @@ class Engine:
                  signal_filter: SignalFilter | None = None, calendar: EventCalendar | None = None,
                  journal: Journal | None = None):
         self.cfg = cfg
-        self.strategy = strategy or TrendPullbackStrategy(cfg.strategy)
+        self.strategy = strategy or build_strategy(cfg.strategy)
         self.filter = signal_filter or SignalFilter()
         self.calendar = calendar or EventCalendar()
         self.journal = journal or Journal()

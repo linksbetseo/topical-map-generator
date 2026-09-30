@@ -21,6 +21,7 @@ class RiskConfig:
 
 @dataclass(frozen=True)
 class StrategyConfig:
+    name: str = "trend_pullback_v1"  # albo "breakout_v1" (częstsze wejścia)
     h1_ema_fast: int = 20
     h1_ema_slow: int = 50
     use_h4: bool = True
@@ -33,6 +34,9 @@ class StrategyConfig:
     tp_atr_mult: float = 2.0
     min_atr: float = 0.5
     max_atr: float = 40.0
+    # breakout_v1: wybicie ponad max / poniżej min ostatnich N świec M15
+    breakout_lookback: int = 8
+    breakout_min_range_atr: float = 1.0  # zakres N świec musi mieć co najmniej tyle ATR (odsiewa flatę)
 
 
 @dataclass(frozen=True)
