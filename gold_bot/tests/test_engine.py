@@ -136,3 +136,28 @@ class DirectionTest(unittest.TestCase):
         r = run_variant(bars, cfg, "L")
         self.assertGreater(r["trades"], 0)
         self.assertEqual(r["short"], 0)
+
+
+class WeekendTradingTest(unittest.TestCase):
+    def test_weekend_trading_allows_saturday(self):
+        from dataclasses import replace
+        from goldbot.config import SessionConfig
+        cfg = BotConfig(session=SessionConfig(weekend_trading=True, daily_break_start="", daily_break_end="",
+                                              no_new_entries_friday_after="", close_before_weekend_at="", rollover_utc=""))
+        eng = Engine(cfg)
+        sat = datetime(2026, 6, 6, 12, 0, tzinfo=timezone.utc)
+        self.assertTrue(eng.entries_allowed(sat)[0])
+        self.assertTrue(eng.entries_allowed(sat.replace(hour=21, minute=30))[0])
+
+
+class OptimizeTest(unittest.TestCase):
+    def test_grid_is_oos_split(self):
+        from goldbot.optimize import run_grid
+        bars = generate(days=30, seed=5)
+        cfg = BotConfig(risk=RiskConfig(risk_per_trade_pct=5.0, max_daily_loss_pct=12.0))
+        res = run_grid(bars, cfg, {"sl_atr_mult": [1.0, 2.0], "tp_atr_mult": [2.0]}, is_fraction=0.5, top=2)
+        self.assertEqual(res["combos"], 2)
+        self.assertEqual(res["bars_is"] + res["bars_oos"], len(bars))
+        self.assertLess(res["is_range"][1], res["oos_range"][0])
+        self.assertEqual(len(res["top"]), 2)
+        self.assertIn("oos", res["top"][0])

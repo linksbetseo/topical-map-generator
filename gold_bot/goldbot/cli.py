@@ -63,6 +63,21 @@ def cmd_fetch(args):
     return 0
 
 
+def cmd_fetch_btc(args):
+    from datetime import date
+    from goldbot.data.binance_feed import BinanceDownloader
+    dl = BinanceDownloader(cache_dir=args.cache, symbol=args.symbol, spread_pct=args.spread_pct)
+    start, end = date.fromisoformat(args.start), date.fromisoformat(args.end)
+    def progress(day, n):
+        if day.day in (1, 15) or day == end:
+            print(f"  {day}: {n} świec, zapytań {dl.requests}, z cache {dl.cache_hits}", flush=True)
+    bars = dl.range_bars(start, end, progress)
+    save_common_csv(args.out, bars)
+    rep = quality.check(bars)
+    print(f"Zapisano {len(bars)} świec M1 do {args.out} (spread założony {args.spread_pct}%); luk >10 min: {rep.gaps_over_threshold}, ok={rep.ok}")
+    return 0
+
+
 def cmd_quality(args):
     bars = _load_bars(args)
     rep = quality.check(bars, gap_minutes=args.gap_minutes)
@@ -113,6 +128,24 @@ def cmd_backtest(args):
         for p in r.get("periods", []):
             print(f"  okres {p['period']}: {p['from'][:10]}..{p['to'][:10]} transakcji={p['trades']} netto={p['net_pnl']}")
     print(f"\nWyniki i dziennik decyzji: {out}/")
+    return 0
+
+
+def cmd_optimize(args):
+    import json as _json
+    from goldbot.optimize import GRIDS, format_report, run_grid, save_report
+    cfg = _apply_overrides(load_config(args.config), args)
+    bars = _load_bars(args)
+    cal = _load_calendar(args)
+    grid = _json.loads(args.grid) if args.grid else GRIDS[cfg.strategy.name]
+    def progress(i, n, params, r):
+        if i % 10 == 0 or i == n:
+            print(f"  {i}/{n}", flush=True)
+    res = run_grid(bars, cfg, grid, cal, is_fraction=args.is_fraction, top=args.top, progress=progress)
+    print(format_report(res))
+    out = Path(args.out) / f"optimize_{cfg.strategy.name}.json"
+    save_report(res, out)
+    print(f"\nPełny wynik: {out}")
     return 0
 
 
@@ -170,6 +203,15 @@ def main(argv=None) -> int:
     p.add_argument("--delay", type=float, default=4.0, help="odstęp między zapytaniami (s); przy mniejszym serwer dławi do 429")
     p.set_defaults(fn=cmd_fetch)
 
+    p = sub.add_parser("fetch-btc", help="pobierz historię 1m z archiwum Binance (mid; bid/ask = mid ± spread/2)")
+    p.add_argument("--start", required=True)
+    p.add_argument("--end", required=True)
+    p.add_argument("--symbol", default="BTCUSDT")
+    p.add_argument("--spread-pct", type=float, default=0.02, help="założony spread w %% (spot ~0.01-0.02, CFD 0.05-0.1)")
+    p.add_argument("--out", default="data/btcusdt_m1.csv")
+    p.add_argument("--cache", default="data/binance_cache")
+    p.set_defaults(fn=cmd_fetch_btc)
+
     p = sub.add_parser("quality", help="kontrola kompletności danych")
     _add_data_args(p)
     p.add_argument("--gap-minutes", type=int, default=10)
@@ -190,6 +232,21 @@ def main(argv=None) -> int:
     p.add_argument("--out", default="runs/latest")
     p.add_argument("--force", action="store_true", help="uruchom mimo błędów jakości danych")
     p.set_defaults(fn=cmd_backtest)
+
+    p = sub.add_parser("optimize", help="siatka parametrów strategii: ocena in-sample, weryfikacja out-of-sample")
+    _add_data_args(p)
+    p.add_argument("--config")
+    p.add_argument("--events", action="append")
+    p.add_argument("--ics", action="append")
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1"])
+    p.add_argument("--direction", choices=["both", "long", "short"])
+    p.add_argument("--risk-pct", type=float)
+    p.add_argument("--daily-loss-pct", type=float)
+    p.add_argument("--grid", help='JSON, np. {"sl_atr_mult":[1,1.5],"tp_atr_mult":[2,3]}')
+    p.add_argument("--is-fraction", type=float, default=0.6, help="udział danych in-sample (reszta = out-of-sample)")
+    p.add_argument("--top", type=int, default=5)
+    p.add_argument("--out", default="runs/optimize")
+    p.set_defaults(fn=cmd_optimize)
 
     p = sub.add_parser("paper", help="symulacja na notowaniach na żywo (cTrader, tylko odczyt) lub odtwarzanych")
     p.add_argument("--source", choices=["ctrader", "replay"], default="replay")

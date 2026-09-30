@@ -31,7 +31,7 @@ def size_position(side: Side, entry: float, sl_distance: float, equity: float,
     if sl_distance <= 0:
         return SizingResult(False, reason="invalid_sl_distance")
     budget = equity * risk.risk_per_trade_pct / 100.0
-    commission_per_oz = 2 * spec.commission_per_lot_per_side / spec.contract_size
+    commission_per_oz = 2 * spec.commission_per_lot_per_side / spec.contract_size + 2 * spec.commission_pct_per_side / 100.0 * entry
     # wejście i wyjście po stopie: poślizg dwukrotnie
     loss_per_oz = sl_distance + 2 * spec.slippage_per_oz + commission_per_oz
     step, min_oz = spec.volume_step_oz, spec.min_volume_oz

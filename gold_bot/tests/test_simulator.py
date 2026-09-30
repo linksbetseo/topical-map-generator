@@ -65,3 +65,14 @@ class ExecutionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PctCommissionTest(unittest.TestCase):
+    def test_pct_commission_both_sides(self):
+        spec = InstrumentSpec(contract_size=1.0, commission_per_lot_per_side=0.0, commission_pct_per_side=0.1, slippage_per_oz=0.0)
+        acc = Account(500, spec)
+        pos = acc.open(Side.LONG, 0.01, flat(T0, 80000.0, spread=0.0), 100, 200)
+        self.assertAlmostEqual(pos.commission_paid, 0.8)  # 0.1% * 800 USD
+        tr = acc.close_at_market(pos, flat(T0 + minutes(1), 80000.0, spread=0.0), "t")
+        self.assertAlmostEqual(tr.commission, 1.6)
+        self.assertAlmostEqual(acc.balance, 498.4)

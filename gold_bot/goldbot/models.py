@@ -80,6 +80,7 @@ class InstrumentSpec:
     volume_step_lots: float = 0.01
     max_volume_lots: float = 50.0
     commission_per_lot_per_side: float = 3.5  # USD
+    commission_pct_per_side: float = 0.0  # % wartości pozycji (giełdy krypto, np. 0.1)
     swap_long_per_lot_per_night: float = -0.0  # USD, ujemne = koszt
     swap_short_per_lot_per_night: float = -0.0
     triple_swap_weekday: int = 2  # 0 = poniedziałek, 2 = środa

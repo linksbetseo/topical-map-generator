@@ -44,6 +44,7 @@ class StrategyConfig:
 class SessionConfig:
     # Codzienna przerwa handlowa (UTC). U wielu brokerów XAU ma przerwę ok. 21:00-22:00 UTC;
     # sprawdź godziny w specyfikacji instrumentu u swojego brokera.
+    weekend_trading: bool = False  # True dla rynków 24/7 (krypto)
     daily_break_start: str = "20:55"
     daily_break_end: str = "22:05"
     no_new_entries_friday_after: str = "19:00"

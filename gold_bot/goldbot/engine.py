@@ -69,10 +69,11 @@ class Engine:
     # --- sesja ------------------------------------------------------------------------
     def entries_allowed(self, t: datetime) -> tuple[bool, str]:
         wd, tt = t.weekday(), t.time()
-        if wd == 5 or (wd == 6 and self._break[1] and tt < self._break[1]):
-            return False, "weekend"
-        if wd == 4 and self._fri_cut and tt >= self._fri_cut:
-            return False, "friday_cutoff"
+        if not self.cfg.session.weekend_trading:
+            if wd == 5 or (wd == 6 and self._break[1] and tt < self._break[1]):
+                return False, "weekend"
+            if wd == 4 and self._fri_cut and tt >= self._fri_cut:
+                return False, "friday_cutoff"
         b0, b1 = self._break
         if b0 and b1 and (b0 <= tt < b1 if b0 < b1 else tt >= b0 or tt < b1):
             return False, "daily_break"
@@ -212,7 +213,8 @@ class Engine:
         if not self.account.positions:
             return
         reason = None
-        if self._weekend_close and bar.time.weekday() == 4 and bar.time.time() >= self._weekend_close:
+        if (self._weekend_close and not self.cfg.session.weekend_trading
+                and bar.time.weekday() == 4 and bar.time.time() >= self._weekend_close):
             reason = "weekend_close"
         elif self.cfg.calendar.close_positions_before_event and self.calendar.events_near(
                 bar.time, timedelta(minutes=self.cfg.calendar.blackout_before_minutes), timedelta(0)):

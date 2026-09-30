@@ -1,0 +1,53 @@
+# BTC/USD - rynek 24/7. Wartości instrumentu odpowiadają w przybliżeniu spot Binance;
+# dla CFD u brokera wpisz jego specyfikację (min. wolumen, prowizję, finansowanie).
+
+[instrument]
+symbol = "BTCUSDT"
+contract_size = 1.0              # 1 "lot" = 1 BTC
+min_volume_lots = 0.0001         # minimalna ilość BTC
+volume_step_lots = 0.0001
+max_volume_lots = 10.0
+commission_per_lot_per_side = 0.0
+commission_pct_per_side = 0.1    # 0.1% od wartości (taker spot bez zniżek)
+swap_long_per_lot_per_night = 0.0
+swap_short_per_lot_per_night = 0.0
+leverage = 1.0                   # spot; dla CFD/perp np. 2-5
+slippage_per_oz = 5.0            # USD na 1 BTC
+
+[risk]
+initial_balance = 500.0
+risk_per_trade_pct = 3.0
+max_daily_loss_pct = 9.0
+max_open_positions = 1
+max_spread = 40.0                # USD na 1 BTC
+max_margin_usage_pct = 90.0
+
+[strategy]
+name = "trend_pullback_v1"
+direction = "both"
+h1_ema_fast = 20
+h1_ema_slow = 50
+use_h4 = true
+h4_ema = 20
+m15_rsi_period = 14
+rsi_long_trigger = 40.0
+rsi_short_trigger = 60.0
+m15_atr_period = 14
+sl_atr_mult = 1.5
+tp_atr_mult = 2.0
+min_atr = 20.0                   # USD; poniżej = martwy rynek
+max_atr = 3000.0
+
+[session]
+weekend_trading = true
+daily_break_start = ""
+daily_break_end = ""
+no_new_entries_friday_after = ""
+close_before_weekend_at = ""
+rollover_utc = ""
+max_entry_delay_minutes = 3
+max_data_gap_minutes = 10
+
+[calendar]
+blackout_before_minutes = 30
+blackout_after_minutes = 30

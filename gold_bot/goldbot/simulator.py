@@ -37,8 +37,9 @@ class Account:
         return sum(p.entry_price * p.volume_oz / self.spec.leverage for p in self.positions)
 
     # --- operacje -----------------------------------------------------------------------
-    def _commission(self, volume_oz: float) -> float:
-        return self.spec.commission_per_lot_per_side * volume_oz / self.spec.contract_size
+    def _commission(self, volume_oz: float, price: float) -> float:
+        fixed = self.spec.commission_per_lot_per_side * volume_oz / self.spec.contract_size
+        return fixed + self.spec.commission_pct_per_side / 100.0 * volume_oz * price
 
     def open(self, side: Side, volume_oz: float, bar: BidAskBar, sl_distance: float, tp_distance: float,
              reason: str = "") -> Position:
@@ -49,7 +50,7 @@ class Account:
         else:
             price = bar.bid_open - slip
             sl, tp = price + sl_distance, price - tp_distance
-        comm = self._commission(volume_oz)
+        comm = self._commission(volume_oz, price)
         self.balance -= comm
         pos = Position(self._next_id, side, volume_oz, bar.time, price, sl, tp, commission_paid=comm, signal_reason=reason)
         self._next_id += 1
@@ -58,7 +59,7 @@ class Account:
 
     def close(self, pos: Position, price: float, time: datetime, reason: str, ambiguous: bool = False) -> Trade:
         gross = (price - pos.entry_price) * pos.volume_oz if pos.side is Side.LONG else (pos.entry_price - price) * pos.volume_oz
-        comm = self._commission(pos.volume_oz)
+        comm = self._commission(pos.volume_oz, price)
         self.balance += gross - comm
         total_comm = pos.commission_paid + comm
         trade = Trade(pos.id, pos.side, pos.volume_oz, pos.entry_time, pos.entry_price, time, price, reason,

@@ -112,3 +112,18 @@ class DukascopyFeedTest(unittest.TestCase):
         self.assertEqual(t, datetime(2026, 5, 1, 0, 1, tzinfo=timezone.utc))
         self.assertEqual((o, h, l, c), (4626.305, 4626.805, 4623.035, 4625.275))
         self.assertEqual(decode_candles(b"", date(2026, 5, 1), 1000.0), [])
+
+
+class BinanceFeedTest(unittest.TestCase):
+    def test_decode_klines_builds_bid_ask(self):
+        import io
+        import zipfile
+        from goldbot.data.binance_feed import decode_klines
+        row = "1788220800000000,80000,80100,79900,80050,8.6,1788220859999999,1,1,1,1,0\n"
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("x.csv", row)
+        (b,) = decode_klines(buf.getvalue(), spread_pct=0.02)
+        self.assertEqual(b.time, datetime(2026, 9, 1, 0, 0, tzinfo=timezone.utc))
+        self.assertAlmostEqual(b.ask_close - b.bid_close, 80050 * 0.0002, places=6)
+        self.assertAlmostEqual((b.bid_open + b.ask_open) / 2, 80000.0)
