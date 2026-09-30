@@ -38,7 +38,16 @@ python -m goldbot backtest --data data/synthetic_m1.csv --config config.example.
 
 ### Dane historyczne z Dukascopy
 
-Wyeksportuj XAU/USD M1 osobno dla BID i ASK (CSV), potem:
+Najprościej: pobierz M1 bid/ask z publicznego feedu Dukascopy (bez konta, format `.bi5`
+sprawdzony empirycznie; pobieranie z odstępem 0,6 s i lokalnym cache, żeby nie dostać 429):
+
+```bash
+python -m goldbot fetch --start 2026-05-04 --end 2026-09-25 --out data/xauusd_m1.csv
+python -m goldbot backtest --data data/xauusd_m1.csv --config config.example.toml \
+    --events examples/fomc_2026.csv --splits 4 --out runs/real
+```
+
+Alternatywnie wyeksportuj XAU/USD M1 osobno dla BID i ASK (CSV) z narzędzia Dukascopy, potem:
 
 ```bash
 python -m goldbot quality  --bid XAUUSD_BID.csv --ask XAUUSD_ASK.csv

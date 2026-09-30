@@ -94,3 +94,21 @@ class CalendarTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DukascopyFeedTest(unittest.TestCase):
+    def test_url_month_is_zero_based(self):
+        from datetime import date
+        from goldbot.data.dukascopy_feed import url_for
+        self.assertTrue(url_for("XAUUSD", date(2026, 5, 1), "BID").endswith("/XAUUSD/2026/04/01/BID_candles_min_1.bi5"))
+
+    def test_decode_candles(self):
+        import lzma
+        import struct
+        from datetime import date
+        from goldbot.data.dukascopy_feed import RECORD, decode_candles
+        raw = lzma.compress(RECORD.pack(60, 4626305, 4625275, 4623035, 4626805, 0.041))
+        (t, o, h, l, c, v), = decode_candles(raw, date(2026, 5, 1), 1000.0)
+        self.assertEqual(t, datetime(2026, 5, 1, 0, 1, tzinfo=timezone.utc))
+        self.assertEqual((o, h, l, c), (4626.305, 4626.805, 4623.035, 4625.275))
+        self.assertEqual(decode_candles(b"", date(2026, 5, 1), 1000.0), [])

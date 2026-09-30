@@ -47,6 +47,22 @@ def cmd_synth(args):
     print(f"Zapisano {len(bars)} syntetycznych świec M1 do {args.out} (tylko do testów działania programu)")
 
 
+def cmd_fetch(args):
+    from datetime import date
+    from goldbot.data.dukascopy_feed import DukascopyDownloader
+    dl = DukascopyDownloader(cache_dir=args.cache, delay_seconds=args.delay)
+    start, end = date.fromisoformat(args.start), date.fromisoformat(args.end)
+    def progress(day, n):
+        if day.weekday() == 4 or day == end:
+            print(f"  {day}: {n} świec, zapytań {dl.requests}, z cache {dl.cache_hits}", flush=True)
+    bars = dl.range_bars(start, end, progress)
+    save_common_csv(args.out, bars)
+    rep = quality.check(bars)
+    print(f"Zapisano {len(bars)} świec M1 do {args.out}; spread mediana {rep.spread_median}, p95 {rep.spread_p95}, "
+          f"luk >10 min: {rep.gaps_over_threshold}, ok={rep.ok}")
+    return 0
+
+
 def cmd_quality(args):
     bars = _load_bars(args)
     rep = quality.check(bars, gap_minutes=args.gap_minutes)
@@ -130,6 +146,14 @@ def main(argv=None) -> int:
     p.add_argument("--price", type=float, default=3800.0)
     p.add_argument("--out", default="data/synthetic_m1.csv")
     p.set_defaults(fn=cmd_synth)
+
+    p = sub.add_parser("fetch", help="pobierz historię M1 bid/ask XAUUSD z publicznego feedu Dukascopy")
+    p.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
+    p.add_argument("--end", required=True)
+    p.add_argument("--out", default="data/xauusd_m1.csv")
+    p.add_argument("--cache", default="data/dukascopy_cache")
+    p.add_argument("--delay", type=float, default=0.6, help="odstęp między zapytaniami (s)")
+    p.set_defaults(fn=cmd_fetch)
 
     p = sub.add_parser("quality", help="kontrola kompletności danych")
     _add_data_args(p)
