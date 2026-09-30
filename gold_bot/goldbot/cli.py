@@ -167,7 +167,7 @@ def main(argv=None) -> int:
     p.add_argument("--end", required=True)
     p.add_argument("--out", default="data/xauusd_m1.csv")
     p.add_argument("--cache", default="data/dukascopy_cache")
-    p.add_argument("--delay", type=float, default=0.6, help="odstęp między zapytaniami (s)")
+    p.add_argument("--delay", type=float, default=4.0, help="odstęp między zapytaniami (s); przy mniejszym serwer dławi do 429")
     p.set_defaults(fn=cmd_fetch)
 
     p = sub.add_parser("quality", help="kontrola kompletności danych")

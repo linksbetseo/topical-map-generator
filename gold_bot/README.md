@@ -39,7 +39,8 @@ python -m goldbot backtest --data data/synthetic_m1.csv --config config.example.
 ### Dane historyczne z Dukascopy
 
 Najprościej: pobierz M1 bid/ask z publicznego feedu Dukascopy (bez konta, format `.bi5`
-sprawdzony empirycznie; pobieranie z odstępem 0,6 s i lokalnym cache, żeby nie dostać 429):
+sprawdzony empirycznie; pobieranie z odstępem 4 s i lokalnym cache — przy szybszym tempie serwer
+odpowiada 429/503 i wydłuża odpowiedzi do 20–40 s, więc kilka miesięcy historii to godziny w tle):
 
 ```bash
 python -m goldbot fetch --start 2026-05-04 --end 2026-09-25 --out data/xauusd_m1.csv
@@ -62,8 +63,8 @@ powinien używać notowań i kosztów docelowego instrumentu.
 
 * `--ics` - plik ICS z harmonogramem BLS. Domyślnie brane są m.in. Employment Situation, CPI, PPI i JOLTS.
   Strefa `US-Eastern` jest przeliczana na UTC z uwzględnieniem czasu letniego.
-* `--events` - CSV `time_utc,name,source`, np. `examples/fomc_2026.csv`.
-  **Daty sprawdź na stronie Fed przed użyciem.**
+* `--events` - CSV `time_utc,name,source`, np. `examples/fomc_2026.csv`
+  (daty 2026 zweryfikowane 30.09.2026 z kalendarzem na federalreserve.gov).
 * W oknie `blackout_before/after_minutes` bot nie otwiera nowych pozycji.
 
 ### Tryb paper
@@ -99,6 +100,15 @@ starcie trzeba zweryfikować pola i jednostki specyfikacji (patrz docstring w `g
 
 Przy 500 USD, 1% ryzyka i minimum 1 oz większość sygnałów zostanie odrzucona. To zamierzony,
 uczciwy wynik: `engine.rejected:*` w raporcie pokazuje, ile i dlaczego.
+
+## Wyniki na danych realnych
+
+Pierwszy przebieg obu strategii na 8 tygodniach (3 sie – 25 wrz 2026) realnych notowań Dukascopy,
+ryzyko 1/2/3/5 %, kierunek both/long: **`results/2026-08-03_2026-09-25_dukascopy.md`**.
+W skrócie: przy 500 USD ryzyko 1 % nie pozwala otworzyć żadnej pozycji (minimum 1 oz);
+`trend_pullback_v1` przy 3–5 % dał +17…+35 % z obsunięciem < 10 %, `breakout_v1` podobny zwrot,
+ale z obsunięciem 20–38 % i zyskiem skupionym w pierwszych 12 dniach rajdu. Za mała próba i jeden reżim
+rynku — to nie jest dowód przewagi.
 
 ## Dwie strategie i wariant agresywny
 
