@@ -18,6 +18,8 @@ class TrendPullbackStrategy:
     name = "trend_pullback_v1"
 
     def __init__(self, cfg: StrategyConfig):
+        if cfg.direction not in ("both", "long", "short"):
+            raise ValueError(f"strategy.direction: '{cfg.direction}' (dozwolone: both, long, short)")
         self.cfg = cfg
         self.h1_fast = EMA(cfg.h1_ema_fast)
         self.h1_slow = EMA(cfg.h1_ema_slow)
@@ -49,6 +51,9 @@ class TrendPullbackStrategy:
         h4 = "up" if self.h4_close > self.h4_ema.value else "down"
         return h1 if h1 == h4 else "flat"
 
+    def allowed(self, side: Side) -> bool:
+        return self.cfg.direction == "both" or self.cfg.direction == side.value
+
     def on_m15(self, bar: Bar) -> Signal | None:
         """Wywoływane po zamknięciu świecy M15 (mid). Zwraca sygnał albo None."""
         prev_rsi = self.rsi.value
@@ -68,7 +73,7 @@ class TrendPullbackStrategy:
             side = Side.LONG
         elif trend == "down" and prev_rsi > self.cfg.rsi_short_trigger >= rsi:
             side = Side.SHORT
-        if side is None:
+        if side is None or not self.allowed(side):
             return None
         return Signal(
             side=side,
@@ -118,7 +123,7 @@ class BreakoutStrategy(TrendPullbackStrategy):
             side = Side.LONG
         elif trend == "down" and bar.close < lo:
             side = Side.SHORT
-        if side is None:
+        if side is None or not self.allowed(side):
             return None
         return Signal(
             side=side,

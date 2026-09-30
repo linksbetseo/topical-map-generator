@@ -12,6 +12,7 @@ max_margin_usage_pct = 80.0
 
 [strategy]
 name = "breakout_v1"
+direction = "both"   # "long" = tylko kupno
 h1_ema_fast = 20
 h1_ema_slow = 50
 use_h4 = false

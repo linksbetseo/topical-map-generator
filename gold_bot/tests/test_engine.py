@@ -124,3 +124,15 @@ class BreakoutStrategyTest(unittest.TestCase):
         from goldbot.strategy import build_strategy
         with self.assertRaises(ValueError):
             build_strategy(StrategyConfig(name="magic"))
+
+
+class DirectionTest(unittest.TestCase):
+    def test_long_only_produces_no_shorts(self):
+        from dataclasses import replace
+        from goldbot.config import StrategyConfig
+        bars = generate(days=40, seed=3)
+        cfg = BotConfig(risk=RiskConfig(risk_per_trade_pct=5.0, max_daily_loss_pct=12.0),
+                        strategy=StrategyConfig(name="breakout_v1", use_h4=False, direction="long"))
+        r = run_variant(bars, cfg, "L")
+        self.assertGreater(r["trades"], 0)
+        self.assertEqual(r["short"], 0)

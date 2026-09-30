@@ -80,6 +80,8 @@ def _apply_overrides(cfg, args):
     strategy = cfg.strategy
     if args.strategy:
         strategy = replace(strategy, name=args.strategy)
+    if args.direction:
+        strategy = replace(strategy, direction=args.direction)
     return replace(cfg, risk=risk, strategy=strategy)
 
 
@@ -181,6 +183,7 @@ def main(argv=None) -> int:
     p.add_argument("--news", help="JSONL komunikatów dla filtra Jev")
     p.add_argument("--variant", choices=["A", "B", "AB"], default="A")
     p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1"], help="nadpisz strategy.name")
+    p.add_argument("--direction", choices=["both", "long", "short"], help="nadpisz strategy.direction")
     p.add_argument("--risk-pct", type=float, help="nadpisz risk.risk_per_trade_pct")
     p.add_argument("--daily-loss-pct", type=float, help="nadpisz risk.max_daily_loss_pct")
     p.add_argument("--splits", type=int, default=3, help="liczba chronologicznych okresów w raporcie")

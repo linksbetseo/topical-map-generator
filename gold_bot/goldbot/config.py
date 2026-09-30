@@ -22,6 +22,7 @@ class RiskConfig:
 @dataclass(frozen=True)
 class StrategyConfig:
     name: str = "trend_pullback_v1"  # albo "breakout_v1" (częstsze wejścia)
+    direction: str = "both"  # "both" | "long" (tylko kupno) | "short"
     h1_ema_fast: int = 20
     h1_ema_slow: int = 50
     use_h4: bool = True
