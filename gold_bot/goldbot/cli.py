@@ -70,8 +70,18 @@ def cmd_quality(args):
     return 0 if rep.ok else 1
 
 
+def _apply_overrides(cfg, args):
+    from dataclasses import replace
+    risk = cfg.risk
+    if args.risk_pct is not None:
+        risk = replace(risk, risk_per_trade_pct=args.risk_pct)
+    if args.daily_loss_pct is not None:
+        risk = replace(risk, max_daily_loss_pct=args.daily_loss_pct)
+    return replace(cfg, risk=risk)
+
+
 def cmd_backtest(args):
-    cfg = load_config(args.config)
+    cfg = _apply_overrides(load_config(args.config), args)
     bars = _load_bars(args)
     rep = quality.check(bars)
     if not rep.ok:
@@ -167,6 +177,8 @@ def main(argv=None) -> int:
     p.add_argument("--ics", action="append", help="kalendarz ICS (np. BLS)")
     p.add_argument("--news", help="JSONL komunikatów dla filtra Jev")
     p.add_argument("--variant", choices=["A", "B", "AB"], default="A")
+    p.add_argument("--risk-pct", type=float, help="nadpisz risk.risk_per_trade_pct")
+    p.add_argument("--daily-loss-pct", type=float, help="nadpisz risk.max_daily_loss_pct")
     p.add_argument("--splits", type=int, default=3, help="liczba chronologicznych okresów w raporcie")
     p.add_argument("--out", default="runs/latest")
     p.add_argument("--force", action="store_true", help="uruchom mimo błędów jakości danych")
