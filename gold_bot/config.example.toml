@@ -1,0 +1,63 @@
+# Przykładowa konfiguracja. Wartości instrumentu UZUPEŁNIJ ze specyfikacji XAUUSD u brokera
+# (cTrader: ProtoOASymbolByIdRes / MT5: symbol_info). Poniższe liczby to tylko punkt startu.
+
+[instrument]
+symbol = "XAUUSD"
+contract_size = 100.0              # uncji na 1 lot
+min_volume_lots = 0.01             # = 1 uncja
+volume_step_lots = 0.01
+max_volume_lots = 50.0
+commission_per_lot_per_side = 3.5  # USD
+swap_long_per_lot_per_night = -0.0 # USD; wpisz wartości brokera (zwykle ujemne)
+swap_short_per_lot_per_night = -0.0
+triple_swap_weekday = 2            # środa
+leverage = 20.0                    # detaliczny limit UE dla złota: 1:20
+slippage_per_oz = 0.05
+
+[risk]
+initial_balance = 500.0
+risk_per_trade_pct = 1.0           # przy 1 oz min. i stopie ~10 USD większość sygnałów zostanie odrzucona - to celowe
+max_daily_loss_pct = 3.0
+max_open_positions = 1
+max_spread = 0.60
+max_margin_usage_pct = 50.0
+
+[strategy]
+h1_ema_fast = 20
+h1_ema_slow = 50
+use_h4 = true
+h4_ema = 20
+m15_rsi_period = 14
+rsi_long_trigger = 40.0
+rsi_short_trigger = 60.0
+m15_atr_period = 14
+sl_atr_mult = 1.5
+tp_atr_mult = 2.0
+
+[session]
+daily_break_start = "20:55"
+daily_break_end = "22:05"
+no_new_entries_friday_after = "19:00"
+close_before_weekend_at = "20:45"
+rollover_utc = "21:00"
+max_entry_delay_minutes = 3
+max_data_gap_minutes = 10
+
+[calendar]
+blackout_before_minutes = 30
+blackout_after_minutes = 30
+close_positions_before_event = false
+
+[jev]
+enabled = false
+# OpenRouter (API zgodne z OpenAI):
+base_url = "https://openrouter.ai/api/v1"
+api_key_env = "OPENROUTER_API_KEY"
+# Musi być KONKRETNA wersja. "typesafe/jev-router" i "*-latest" są odrzucane,
+# bo mogą zmieniać model bez zmiany po naszej stronie.
+model = ""
+lookback_minutes = 240
+max_items = 20
+block_categories = ["geopolitical_escalation", "central_bank_surprise", "market_structure_disruption"]
+on_error = "block"
+cache_path = "runs/jev_cache.jsonl"

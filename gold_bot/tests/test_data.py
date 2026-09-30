@@ -1,0 +1,96 @@
+import tempfile
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+
+from goldbot.calendar import EventCalendar, Event, parse_ics
+from goldbot.data import quality
+from goldbot.data.loaders import load_dukascopy_pair, parse_time
+from goldbot.data.resample import BarAggregator, TickToM1
+from goldbot.models import Bar, Quote
+from tests.helpers import T0, flat, minutes
+
+
+class ResampleTest(unittest.TestCase):
+    def test_m15_emitted_only_after_last_minute(self):
+        agg = BarAggregator(15)
+        out = []
+        for i in range(15):
+            done = agg.update(Bar(T0 + minutes(i), 1 + i, 2 + i, 0.5 + i, 1.5 + i))
+            if i < 14:
+                self.assertEqual(done, [])
+            out += done
+        self.assertEqual(len(out), 1)
+        b = out[0]
+        self.assertEqual((b.time, b.open, b.high, b.low, b.close), (T0, 1, 16, 0.5, 15.5))
+
+    def test_gap_flushes_incomplete_bucket(self):
+        agg = BarAggregator(15)
+        agg.update(Bar(T0, 1, 1, 1, 1))
+        done = agg.update(Bar(T0 + minutes(40), 2, 2, 2, 2))
+        self.assertEqual([b.time for b in done], [T0])
+
+    def test_tick_to_m1(self):
+        agg = TickToM1()
+        self.assertIsNone(agg.update(Quote(T0, 10, 10.2)))
+        agg.update(Quote(T0 + minutes(0.5), 11, 11.3))
+        b = agg.update(Quote(T0 + minutes(1), 9, 9.1))
+        self.assertEqual((b.bid_open, b.bid_high, b.bid_close, b.ask_high), (10, 11, 11, 11.3))
+
+
+class LoaderTest(unittest.TestCase):
+    def test_dukascopy_time_formats(self):
+        self.assertEqual(parse_time("01.09.2026 13:45:00.000"), datetime(2026, 9, 1, 13, 45, tzinfo=timezone.utc))
+        self.assertEqual(parse_time("01.09.2026 15:45:00.000 GMT+0200"), datetime(2026, 9, 1, 13, 45, tzinfo=timezone.utc))
+
+    def test_dukascopy_pair_merge(self):
+        with tempfile.TemporaryDirectory() as d:
+            bid, ask = Path(d, "bid.csv"), Path(d, "ask.csv")
+            bid.write_text("Gmt time,Open,High,Low,Close,Volume\n"
+                           "01.09.2026 00:00:00.000,3800,3801,3799,3800.5,10\n"
+                           "01.09.2026 00:01:00.000,3800.5,3800.5,3800.5,3800.5,0\n"
+                           "01.09.2026 00:02:00.000,3800,3801,3799,3800.5,10\n")
+            ask.write_text("Gmt time,Open,High,Low,Close,Volume\n"
+                           "01.09.2026 00:00:00.000,3800.3,3801.3,3799.3,3800.8,10\n"
+                           "01.09.2026 00:01:00.000,3800.8,3800.8,3800.8,3800.8,0\n")
+            bars, rep = load_dukascopy_pair(bid, ask)
+            self.assertEqual(len(bars), 1)
+            self.assertEqual(rep.only_bid, 1)
+            self.assertEqual(rep.dropped_flat_zero_volume, 1)
+            self.assertAlmostEqual(bars[0].ask_close, 3800.8)
+
+    def test_quality_detects_problems(self):
+        bars = [flat(T0, 3800), flat(T0, 3800), flat(T0 + minutes(30), 3800, spread=-0.1)]
+        rep = quality.check(bars)
+        self.assertEqual(rep.duplicates, 1)
+        self.assertEqual(rep.crossed_quotes, 1)
+        self.assertEqual(rep.gaps_over_threshold, 1)
+        self.assertFalse(rep.ok)
+
+
+class CalendarTest(unittest.TestCase):
+    ICS = ("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART;TZID=US-Eastern:20261106T083000\r\n"
+           "SUMMARY:Employment Situation for October 2026\r\nEND:VEVENT\r\n"
+           "BEGIN:VEVENT\r\nDTSTART;TZID=US-Eastern:20260715T083000\r\nSUMMARY:Consumer Price Index\r\n  for June 2026\r\nEND:VEVENT\r\n"
+           "BEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20261107\r\nSUMMARY:All day\r\nEND:VEVENT\r\n"
+           "BEGIN:VEVENT\r\nDTSTART;TZID=US-Eastern:20261106T100000\r\nSUMMARY:Some Other Release\r\nEND:VEVENT\r\n"
+           "END:VCALENDAR\r\n")
+
+    def test_ics_timezones_and_filter(self):
+        ev = parse_ics(self.ICS, keywords=("Employment Situation", "Consumer Price Index"))
+        self.assertEqual(len(ev), 2)
+        # 8:30 EST (listopad) = 13:30 UTC; 8:30 EDT (lipiec) = 12:30 UTC
+        self.assertEqual(ev[0].time, datetime(2026, 11, 6, 13, 30, tzinfo=timezone.utc))
+        self.assertEqual(ev[1].time, datetime(2026, 7, 15, 12, 30, tzinfo=timezone.utc))
+        self.assertEqual(ev[1].name, "Consumer Price Index for June 2026")
+
+    def test_blackout_window(self):
+        cal = EventCalendar([Event(T0, "NFP")])
+        self.assertTrue(cal.events_near(T0 - minutes(20), minutes(30), minutes(15)))
+        self.assertTrue(cal.events_near(T0 + minutes(15), minutes(30), minutes(15)))
+        self.assertFalse(cal.events_near(T0 + minutes(16), minutes(30), minutes(15)))
+        self.assertFalse(cal.events_near(T0 - minutes(31), minutes(30), minutes(15)))
+
+
+if __name__ == "__main__":
+    unittest.main()

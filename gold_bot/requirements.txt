@@ -1,0 +1,3 @@
+# Rdzeń (backtest, symulator, kalendarz, filtr Jev) używa tylko biblioteki standardowej Pythona 3.11+.
+# Opcjonalnie - tylko dla trybu paper z cTrader Open API:
+# ctrader-open-api
