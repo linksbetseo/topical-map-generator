@@ -134,6 +134,13 @@ Wynik: `results/2026-05-01_2026-09-28_btc_binance.md` — **obie strategie ze z�
 kosztów** (90 kombinacji siatki, żadna dodatnia in-sample); na spocie 1× z 500 USD depozyt, nie ryzyko, ogranicza
 wielkość pozycji, a prowizje zjadają 150–350 USD.
 
+### 7 miesięcy złota — werdykt
+
+`results/2026-03-02_2026-09-25_gold_7m.md`: na marzec–wrzesień 2026 (krach −16 %, zjazd, rajd) tylko
+`trend_pullback_v1` z **bazowymi** parametrami jest dodatni (+14 % przy 3 %, +38 % przy 5 %), ale z PF 1,1–1,2,
+obsunięciem 21–30 % i 3 z 7 okresów na minusie. „Dopracowany” na lecie zestaw RSI 35 / TP 3 traci 20 % —
+klasyczne dopasowanie do 8 tygodni, dlatego domyślna konfiguracja pozostaje bez zmian. `swing_v1` na złocie odpada.
+
 ### swing_v1 — wolna strategia z trailing stopem
 
 Kanał max/min z ostatnich N świec H4, wejście z zamknięcia M15 w kierunku trendu H4, stop i trailing = k × ATR(H4).
