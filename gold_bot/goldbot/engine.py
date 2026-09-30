@@ -19,7 +19,7 @@ from goldbot.config import BotConfig
 from goldbot.data.resample import BarAggregator
 from goldbot.filters.base import SignalFilter
 from goldbot.journal import Journal
-from goldbot.models import BidAskBar, Side, Signal
+from goldbot.models import Bar, BidAskBar, Side, Signal
 from goldbot.risk import size_position
 from goldbot.simulator import Account
 from goldbot.strategy import TrendPullbackStrategy, build_strategy
@@ -131,8 +131,23 @@ class Engine:
             self.strategy.on_h1(b)
         for b in self.m15.update(mid):
             sig = self.strategy.on_m15(b)
+            self._trail(b)
             if sig is not None:
                 self._decide(sig, bar)
+
+    def _trail(self, m15: Bar) -> None:
+        trail = getattr(self.strategy, "trail", None)
+        if trail is None:
+            return
+        for p in self.account.positions:
+            new_sl = trail(p, m15)
+            if new_sl is None:
+                continue
+            tighter = new_sl > p.sl if p.side is Side.LONG else new_sl < p.sl
+            if tighter:
+                self.journal.log(m15.time, "trail", trade_id=p.id, old_sl=round(p.sl, 3), new_sl=round(new_sl, 3))
+                p.sl = new_sl
+                self.stats["trail_updates"] += 1
 
     def _mark(self, bar: BidAskBar) -> None:
         eq = self.account.equity(bar.bid_close, bar.ask_close)

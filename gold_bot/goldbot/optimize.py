@@ -24,6 +24,11 @@ GRIDS = {
         "rsi_long_trigger": [35.0, 40.0, 45.0],
         "use_h4": [True, False],
     },
+    "swing_v1": {
+        "swing_lookback_h4": [12, 20, 30],
+        "swing_trail_atr": [1.5, 2.0, 3.0],
+        "tp_atr_mult": [6.0, 10.0],
+    },
     "breakout_v1": {
         "sl_atr_mult": [1.0, 1.5, 2.0],
         "tp_atr_mult": [1.5, 2.0, 3.0],

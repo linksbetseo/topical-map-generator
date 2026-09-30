@@ -35,6 +35,10 @@ class StrategyConfig:
     tp_atr_mult: float = 2.0
     min_atr: float = 0.5
     max_atr: float = 40.0
+    # swing_v1: wybicie kanału z ostatnich N świec H4 w kierunku trendu H4, trailing stop k*ATR(H4)
+    swing_lookback_h4: int = 20
+    swing_atr_period_h4: int = 14
+    swing_trail_atr: float = 2.0
     # breakout_v1: wybicie ponad max / poniżej min ostatnich N świec M15
     breakout_lookback: int = 8
     breakout_min_range_atr: float = 1.0  # zakres N świec musi mieć co najmniej tyle ATR (odsiewa flatę)

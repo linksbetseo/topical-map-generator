@@ -136,7 +136,71 @@ class BreakoutStrategy(TrendPullbackStrategy):
         )
 
 
-STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy}
+class SwingStrategy(TrendPullbackStrategy):
+    """Wolna strategia: wejście, gdy M15 zamyka się poza kanałem max/min ostatnich N świec H4
+    w kierunku trendu H4 (cena vs EMA H4). Stop początkowy i trailing = k * ATR(H4).
+    Cel (tp_atr_mult * ATR H4) jest daleko - wyjście zwykle przez trailing stop.
+
+    Kilkanaście transakcji na kwartał. Odpowiedź na wynik BTC: częste wejścia M15 nie miały tam przewagi.
+    """
+
+    name = "swing_v1"
+
+    def __init__(self, cfg: StrategyConfig):
+        super().__init__(cfg)
+        self.h4_window: deque[Bar] = deque(maxlen=cfg.swing_lookback_h4)
+        self.h4_atr = ATR(cfg.swing_atr_period_h4)
+        self.extreme: dict[int, float] = {}  # id pozycji -> najlepsze zamknięcie M15 od wejścia
+
+    def on_h4(self, bar: Bar) -> None:
+        super().on_h4(bar)
+        self.h4_atr.update(bar.high, bar.low, bar.close)
+        self.h4_window.append(bar)
+
+    def on_m15(self, bar: Bar) -> Signal | None:
+        self.rsi.update(bar.close)
+        self.atr.update(bar.high, bar.low, bar.close)
+        atr = self.h4_atr.value
+        if atr is None or self.h4_ema.value is None or len(self.h4_window) < self.cfg.swing_lookback_h4:
+            return None
+        if not (self.cfg.min_atr <= atr <= self.cfg.max_atr):
+            return None
+        hi = max(b.high for b in self.h4_window)
+        lo = min(b.low for b in self.h4_window)
+        trend = "up" if self.h4_close > self.h4_ema.value else "down"
+        side = None
+        if trend == "up" and bar.close > hi:
+            side = Side.LONG
+        elif trend == "down" and bar.close < lo:
+            side = Side.SHORT
+        if side is None or not self.allowed(side):
+            return None
+        return Signal(
+            side=side,
+            sl_distance=self.cfg.swing_trail_atr * atr,
+            tp_distance=self.cfg.tp_atr_mult * atr,
+            decided_at=bar.time + timedelta(minutes=15),
+            reason=f"{self.name}: trend H4={trend}, close {bar.close:.2f} vs kanał {lo:.2f}-{hi:.2f}",
+            features={"atr_h4": round(atr, 3), "trend": trend, "channel_hi": hi, "channel_lo": lo, "close": bar.close},
+        )
+
+    def trail(self, position, bar: Bar) -> float | None:
+        """Nowy poziom SL po zamknięciu M15 albo None. Silnik przyjmie tylko poziom ciaśniejszy."""
+        atr = self.h4_atr.value
+        if atr is None:
+            return None
+        ext = self.extreme.get(position.id)
+        if position.side is Side.LONG:
+            ext = bar.close if ext is None else max(ext, bar.close)
+            self.extreme[position.id] = ext
+            return ext - self.cfg.swing_trail_atr * atr
+        ext = bar.close if ext is None else min(ext, bar.close)
+        self.extreme[position.id] = ext
+        return ext + self.cfg.swing_trail_atr * atr
+
+
+STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy,
+              SwingStrategy.name: SwingStrategy}
 
 
 def build_strategy(cfg: StrategyConfig) -> TrendPullbackStrategy:

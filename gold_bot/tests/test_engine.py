@@ -161,3 +161,25 @@ class OptimizeTest(unittest.TestCase):
         self.assertLess(res["is_range"][1], res["oos_range"][0])
         self.assertEqual(len(res["top"]), 2)
         self.assertIn("oos", res["top"][0])
+
+
+class SwingStrategyTest(unittest.TestCase):
+    def test_swing_trades_and_trailing_only_tightens(self):
+        from goldbot.config import StrategyConfig
+        bars = generate(days=60, seed=11, price=1000.0)  # niższa cena: SL 2*ATR(H4) mieści się w 5% ryzyka przy 1 oz
+        cfg = BotConfig(risk=RiskConfig(risk_per_trade_pct=5.0, max_daily_loss_pct=12.0),
+                        strategy=StrategyConfig(name="swing_v1", tp_atr_mult=8.0, max_atr=500.0))
+        eng = Engine(cfg)
+        for b in bars:
+            eng.on_bar(b)
+        eng.finish()
+        self.assertGreater(len(eng.account.trades), 0)
+        trails = [r for r in eng.journal.records if r["kind"] == "trail"]
+        self.assertGreater(len(trails), 0)
+        by_trade = {}
+        for r in trails:
+            side = next(t.side for t in eng.account.trades if t.id == r["trade_id"])
+            prev = by_trade.get(r["trade_id"])
+            if prev is not None:
+                self.assertTrue(r["new_sl"] > prev if side is Side.LONG else r["new_sl"] < prev)
+            by_trade[r["trade_id"]] = r["new_sl"]
