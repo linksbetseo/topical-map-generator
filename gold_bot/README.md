@@ -110,6 +110,30 @@ W skrócie: przy 500 USD ryzyko 1 % nie pozwala otworzyć żadnej pozycji (minim
 ale z obsunięciem 20–38 % i zyskiem skupionym w pierwszych 12 dniach rajdu. Za mała próba i jeden reżim
 rynku — to nie jest dowód przewagi.
 
+### Dopracowywanie parametrów (IS/OOS)
+
+```bash
+python -m goldbot optimize --data data/xauusd_m1.csv --config config.example.toml --risk-pct 5 --daily-loss-pct 12 \
+    --events examples/fomc_2026.csv            # siatka domyślna dla strategii z configu
+python -m goldbot optimize ... --grid '{"sl_atr_mult":[1,1.5],"tp_atr_mult":[2,3]}'
+```
+
+Siatka jest oceniana na pierwszych 60 % danych (in-sample), a 5 najlepszych zestawów sprawdzanych na ostatnich
+40 % (out-of-sample), których nie widziały. Wyniki: `results/2026-09-30_gold_optimize_is_oos.md` — na złocie
+`trend_pullback_v1` utrzymał dodatni wynik OOS, `breakout_v1` w każdym zestawie z czołówki IS traci na OOS.
+
+### BTC
+
+```bash
+python -m goldbot fetch-btc --start 2026-05-01 --end 2026-09-28 --spread-pct 0.02   # archiwum Binance, ~3 min
+python -m goldbot backtest --data data/btcusdt_m1.csv --config config.btc.toml --strategy trend_pullback_v1 --risk-pct 5
+```
+
+`config.btc.toml` opisuje rynek 24/7 (bez przerw i zamykania na weekend), prowizję procentową i minimalną ilość BTC.
+Wynik: `results/2026-05-01_2026-09-28_btc_binance.md` — **obie strategie ze złota nie mają przewagi na BTC nawet bez
+kosztów** (90 kombinacji siatki, żadna dodatnia in-sample); na spocie 1× z 500 USD depozyt, nie ryzyko, ogranicza
+wielkość pozycji, a prowizje zjadają 150–350 USD.
+
 ## Dwie strategie i wariant agresywny
 
 | | `trend_pullback_v1` (`config.example.toml`) | `breakout_v1` (`config.aggressive.toml`) |
