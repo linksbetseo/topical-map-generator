@@ -134,6 +134,13 @@ Wynik: `results/2026-05-01_2026-09-28_btc_binance.md` — **obie strategie ze z�
 kosztów** (90 kombinacji siatki, żadna dodatnia in-sample); na spocie 1× z 500 USD depozyt, nie ryzyko, ogranicza
 wielkość pozycji, a prowizje zjadają 150–350 USD.
 
+### swing_v1 — wolna strategia z trailing stopem
+
+Kanał max/min z ostatnich N świec H4, wejście z zamknięcia M15 w kierunku trendu H4, stop i trailing = k × ATR(H4).
+Silnik zacieśnia SL po każdym zamknięciu M15 (`trail`). Wyniki: `results/2026-09-30_swing_v1_btc_gold.md` —
+na BTC jedyna strategia z dodatnim wynikiem brutto; zestaw `N 30, trail 1,5` dodatni w obu połowach (IS +6 %, OOS +20 %),
+ale to 42 transakcje i silna zależność od reżimu. Na złocie z 500 USD stop 2 × ATR(H4) nie mieści się w 1 oz.
+
 ## Dwie strategie i wariant agresywny
 
 | | `trend_pullback_v1` (`config.example.toml`) | `breakout_v1` (`config.aggressive.toml`) |
