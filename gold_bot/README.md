@@ -145,7 +145,9 @@ Wynik na 8 tygodniach EURUSD: `results/2026-08-03_2026-09-25_eurusd_scalp.md` �
 w każdym z 36 zestawów już in-sample** (−10…−62 %), a bez prowizji i poślizgu jest na zerze (PF 0,9–1,0): logika nie ma
 przewagi, koszty ją dobijają. Infrastruktura bota daily (mikro-loty, okno sesji, flat, stop czasowy) działa.
 Za to `london_breakout_v1` (wybicie zakresu azjatyckiego po otwarciu Londynu, 1–2 wejścia dziennie, SL 8 / TP 12–16 pipsów)
-jest **pierwszą strategią z dodatnim IS i OOS po kosztach** (PF 1,3–1,9) — na 34 transakcjach, więc to kandydat, nie dowód.
+był dodatni IS i OOS na lecie (34 transakcje, PF 1,25) — ale na **styczniu–marcu 2026 traci 26–34 %** (PF 0,36–0,42).
+Lato było jednym reżimem, nie przewagą. Na EURUSD po kosztach nie mamy żadnej strategii z przewagą; dalsze strojenie
+parametrów tych logik nie ma sensu — potrzebna jest informacja spoza samej ceny M1.
 
 ### 7 miesięcy złota — werdykt
 
