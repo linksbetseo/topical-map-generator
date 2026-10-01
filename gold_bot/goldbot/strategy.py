@@ -254,6 +254,74 @@ class ScalpMeanRevStrategy(TrendPullbackStrategy):
         )
 
 
+class NewsReactionStrategy(TrendPullbackStrategy):
+    """Reakcja na publikację o stałej porze (domyślnie 08:30 czasu Nowego Jorku: NFP, CPI, PPI, sprzedaż detaliczna, PKB,
+    wnioski o zasiłek). Nie potrzebuje pliku kalendarza: "było zdarzenie" rozpoznajemy po świecy M1 zdarzenia, która
+    już się zamknęła (|ruch| >= k * ATR(M1) sprzed publikacji) - bez zaglądania w przyszłość.
+
+    Po nr_wait_minutes (spread wraca do normy) wejście w kierunku ruchu ("momentum") albo przeciw ("fade"),
+    pod warunkiem że cena nadal jest po tej samej stronie co zamknięcie świecy zdarzenia. Stały SL w pipsach, cel = rr * SL.
+    Maksymalnie jedno wejście dziennie.
+    """
+
+    name = "news_reaction_v1"
+
+    def __init__(self, cfg: StrategyConfig, pip_size: float = 0.0001):
+        super().__init__(cfg)
+        from zoneinfo import ZoneInfo
+        if cfg.nr_mode not in ("momentum", "fade"):
+            raise ValueError(f"strategy.nr_mode: '{cfg.nr_mode}' (momentum | fade)")
+        self.pip = pip_size
+        self.tz = ZoneInfo(cfg.nr_event_tz)
+        self.ev_h, self.ev_m = (int(x) for x in cfg.nr_event_time.split(":"))
+        self.atr_m1 = ATR(30)
+        self.prev_close: float | None = None
+        self.day = None
+        self.shock: dict | None = None  # {"dir": +1/-1, "close": float, "at": datetime}
+        self.done = False
+
+    def on_m15(self, bar: Bar) -> Signal | None:
+        self.rsi.update(bar.close)
+        self.atr.update(bar.high, bar.low, bar.close)
+        return None
+
+    def on_m1(self, bar: Bar) -> Signal | None:
+        local = bar.time.astimezone(self.tz)
+        if local.date() != self.day:
+            self.day, self.shock, self.done = local.date(), None, False
+        atr_before = self.atr_m1.value  # ATR sprzed tej świecy
+        prev_close, self.prev_close = self.prev_close, bar.close
+        self.atr_m1.update(bar.high, bar.low, bar.close)
+        if self.done or atr_before is None or prev_close is None or local.weekday() >= 5:
+            return None
+        if (local.hour, local.minute) == (self.ev_h, self.ev_m):
+            move = bar.close - prev_close
+            if abs(move) >= self.cfg.nr_shock_atr * atr_before and abs(move) / self.pip >= self.cfg.nr_min_move_pips:
+                self.shock = {"dir": 1 if move > 0 else -1, "close": bar.close, "base": prev_close,
+                              "move_pips": move / self.pip, "atr_pips": atr_before / self.pip, "at": bar.time}
+            return None
+        if self.shock is None:
+            return None
+        minutes_after = (bar.time - self.shock["at"]).total_seconds() / 60
+        if minutes_after < self.cfg.nr_wait_minutes:
+            return None
+        self.done = True  # jedna próba na zdarzenie, niezależnie od wyniku warunku
+        d = self.shock["dir"]
+        if (bar.close - self.shock["base"]) * d <= 0:  # ruch już się w pełni cofnął - brak sygnału
+            return None
+        side = (Side.LONG if d > 0 else Side.SHORT) if self.cfg.nr_mode == "momentum" else (Side.SHORT if d > 0 else Side.LONG)
+        if not self.allowed(side):
+            return None
+        sl = self.cfg.nr_sl_pips * self.pip
+        return Signal(
+            side=side, sl_distance=sl, tp_distance=self.cfg.nr_tp_rr * sl,
+            decided_at=bar.time + timedelta(minutes=1),
+            reason=f"{self.name}/{self.cfg.nr_mode}: ruch {self.shock['move_pips']:+.1f} pips przy ATR {self.shock['atr_pips']:.2f}",
+            features={"move_pips": round(self.shock["move_pips"], 1), "atr_pips": round(self.shock["atr_pips"], 2),
+                      "minutes_after": minutes_after},
+        )
+
+
 class LondonBreakoutStrategy(TrendPullbackStrategy):
     """Bot "daily": zakres sesji azjatyckiej (domyślnie 00:00-07:00 UTC) -> po otwarciu Londynu wejście,
     gdy M1 zamyka się poza zakresem. Stop = min(lb_sl_pips, zakres), cel = lb_tp_rr * stop, maks. jedno
@@ -272,6 +340,8 @@ class LondonBreakoutStrategy(TrendPullbackStrategy):
         self.range_hi = self.range_lo = None
         self.done: set[Side] = set()
         self._t = lambda s: tuple(int(x) for x in s.split(":"))
+        self.past_ranges: deque[float] = deque(maxlen=max(cfg.lb_compress_lookback, 1))
+        self._range_logged = False
 
     def on_m15(self, bar: Bar) -> Signal | None:
         self.rsi.update(bar.close)
@@ -281,6 +351,7 @@ class LondonBreakoutStrategy(TrendPullbackStrategy):
     def on_m1(self, bar: Bar) -> Signal | None:
         if bar.time.date() != self.day:
             self.day, self.range_hi, self.range_lo, self.done = bar.time.date(), None, None, set()
+            self._range_logged = False
         hm = (bar.time.hour, bar.time.minute)
         r0, r1, until = self._t(self.cfg.lb_range_start), self._t(self.cfg.lb_range_end), self._t(self.cfg.lb_entry_until)
         if r0 <= hm < r1:
@@ -290,6 +361,16 @@ class LondonBreakoutStrategy(TrendPullbackStrategy):
         if self.range_hi is None or not (r1 <= hm < until):
             return None
         rng = (self.range_hi - self.range_lo) / self.pip
+        history = sorted(self.past_ranges)
+        if not self._range_logged:  # zakres dnia trafia do historii raz, po zamknięciu okna azjatyckiego
+            self.past_ranges.append(rng)
+            self._range_logged = True
+        if self.cfg.lb_compress_lookback > 0:
+            if len(history) < self.cfg.lb_compress_lookback:
+                return None
+            median = history[len(history) // 2]
+            if rng > self.cfg.lb_compress_ratio * median:
+                return None
         if not (self.cfg.lb_min_range_pips <= rng <= self.cfg.lb_max_range_pips):
             return None
         side = None
@@ -311,7 +392,7 @@ class LondonBreakoutStrategy(TrendPullbackStrategy):
 
 STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy,
               SwingStrategy.name: SwingStrategy, ScalpMeanRevStrategy.name: ScalpMeanRevStrategy,
-              LondonBreakoutStrategy.name: LondonBreakoutStrategy}
+              LondonBreakoutStrategy.name: LondonBreakoutStrategy, NewsReactionStrategy.name: NewsReactionStrategy}
 
 
 def build_strategy(cfg: StrategyConfig, pip_size: float = 0.0001) -> TrendPullbackStrategy:
@@ -319,6 +400,6 @@ def build_strategy(cfg: StrategyConfig, pip_size: float = 0.0001) -> TrendPullba
         cls = STRATEGIES[cfg.name]
     except KeyError:
         raise ValueError(f"Nieznana strategia '{cfg.name}'. Dostępne: {sorted(STRATEGIES)}") from None
-    if cls in (ScalpMeanRevStrategy, LondonBreakoutStrategy):
+    if cls in (ScalpMeanRevStrategy, LondonBreakoutStrategy, NewsReactionStrategy):
         return cls(cfg, pip_size)
     return cls(cfg)

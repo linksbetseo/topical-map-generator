@@ -149,6 +149,10 @@ był dodatni IS i OOS na lecie (34 transakcje, PF 1,25) — ale na **styczniu–
 Lato było jednym reżimem, nie przewagą. Na EURUSD po kosztach nie mamy żadnej strategii z przewagą; dalsze strojenie
 parametrów tych logik nie ma sensu — potrzebna jest informacja spoza samej ceny M1.
 
+Nowe hipotezy (informacja spoza ceny M1): `results/2026-10-01_fx_new_hypotheses.md` — **fade po szoku z danych USA (08:30 NY)
+na EURUSD** jest dodatni po kosztach w styczniu–marcu i sierpniu–wrześniu (parametry ustalone na IS, PF OOS 1,8–2,1),
+ale to 14 transakcji w 5 miesięcy i t ≈ 1,1 — za mało, by odróżnić od przypadku. Badanie zdarzeń: `goldbot/event_study.py`.
+
 ### 7 miesięcy złota — werdykt
 
 `results/2026-03-02_2026-09-25_gold_7m.md`: na marzec–wrzesień 2026 (krach −16 %, zjazd, rajd) tylko

@@ -35,6 +35,13 @@ GRIDS = {
         "scalp_tp_pips": [2.0, 3.0, 5.0],
         "max_hold_minutes": [15, 45],
     },
+    "news_reaction_v1": {
+        "nr_mode": ["momentum", "fade"],
+        "nr_shock_atr": [3.0, 5.0],
+        "nr_wait_minutes": [1, 5],
+        "nr_sl_pips": [8.0, 15.0],
+        "nr_tp_rr": [1.0, 2.0],
+    },
     "london_breakout_v1": {
         "lb_sl_pips": [6.0, 8.0, 12.0],
         "lb_tp_rr": [1.0, 1.5, 2.0],
@@ -63,9 +70,13 @@ def split_bars(bars: list[BidAskBar], is_fraction: float) -> tuple[list[BidAskBa
 
 
 def run_grid(bars: list[BidAskBar], cfg: BotConfig, grid: dict[str, list], calendar: EventCalendar | None = None,
-             is_fraction: float = 0.6, top: int = 5, progress=None) -> dict:
+             is_fraction: float = 0.6, top: int = 5, progress=None, oos_bars: list[BidAskBar] | None = None) -> dict:
+    """`oos_bars` podane = IS to całe `bars`, OOS to osobny (np. odległy w czasie) zbiór."""
     strat = cfg.strategy
-    is_bars, oos_bars = split_bars(bars, is_fraction)
+    if oos_bars is not None:
+        is_bars = bars
+    else:
+        is_bars, oos_bars = split_bars(bars, is_fraction)
     keys = list(grid)
     combos = list(itertools.product(*(grid[k] for k in keys)))
     rows = []

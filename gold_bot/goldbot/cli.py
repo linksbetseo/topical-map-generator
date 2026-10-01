@@ -155,7 +155,8 @@ def cmd_optimize(args):
     def progress(i, n, params, r):
         if i % 10 == 0 or i == n:
             print(f"  {i}/{n}", flush=True)
-    res = run_grid(bars, cfg, grid, cal, is_fraction=args.is_fraction, top=args.top, progress=progress)
+    oos = load_common_csv(args.oos_data) if args.oos_data else None
+    res = run_grid(bars, cfg, grid, cal, is_fraction=args.is_fraction, top=args.top, progress=progress, oos_bars=oos)
     print(format_report(res))
     out = Path(args.out) / f"optimize_{cfg.strategy.name}.json"
     save_report(res, out)
@@ -242,7 +243,7 @@ def main(argv=None) -> int:
     p.add_argument("--ticks", help="katalog z tickami Dukascopy (tryb tickowy; --data = rozgrzewka M1)")
     p.add_argument("--ticks-start", help="ISO; od kiedy brać ticki (rozgrzewka M1 do tej chwili)")
     p.add_argument("--ticks-end", help="ISO; do kiedy")
-    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1", "london_breakout_v1"], help="nadpisz strategy.name")
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1", "london_breakout_v1", "news_reaction_v1"], help="nadpisz strategy.name")
     p.add_argument("--direction", choices=["both", "long", "short"], help="nadpisz strategy.direction")
     p.add_argument("--risk-pct", type=float, help="nadpisz risk.risk_per_trade_pct")
     p.add_argument("--daily-loss-pct", type=float, help="nadpisz risk.max_daily_loss_pct")
@@ -256,12 +257,13 @@ def main(argv=None) -> int:
     p.add_argument("--config")
     p.add_argument("--events", action="append")
     p.add_argument("--ics", action="append")
-    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1", "london_breakout_v1"])
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1", "london_breakout_v1", "news_reaction_v1"])
     p.add_argument("--direction", choices=["both", "long", "short"])
     p.add_argument("--risk-pct", type=float)
     p.add_argument("--daily-loss-pct", type=float)
     p.add_argument("--grid", help='JSON, np. {"sl_atr_mult":[1,1.5],"tp_atr_mult":[2,3]}')
     p.add_argument("--is-fraction", type=float, default=0.6, help="udział danych in-sample (reszta = out-of-sample)")
+    p.add_argument("--oos-data", help="osobny CSV out-of-sample (wtedy --data w całości = in-sample)")
     p.add_argument("--top", type=int, default=5)
     p.add_argument("--out", default="runs/optimize")
     p.set_defaults(fn=cmd_optimize)

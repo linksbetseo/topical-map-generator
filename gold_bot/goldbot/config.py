@@ -53,6 +53,17 @@ class StrategyConfig:
     lb_sl_pips: float = 8.0  # stop = min(lb_sl_pips, zakres) - nie szerzej niż cały zakres
     lb_tp_rr: float = 1.5  # cel = lb_tp_rr * stop
     lb_one_per_direction: bool = True
+    lb_compress_lookback: int = 0  # >0: wchodź tylko gdy zakres azjatycki < lb_compress_ratio * mediana z N poprzednich dni
+    lb_compress_ratio: float = 1.0
+    # news_reaction_v1: reakcja na publikację o stałej godzinie (domyślnie 08:30 Nowy Jork = dane makro USA)
+    nr_event_time: str = "08:30"
+    nr_event_tz: str = "America/New_York"
+    nr_shock_atr: float = 4.0  # świeca zdarzenia musi mieć |close - poprzedni close| >= k * ATR(M1) sprzed zdarzenia
+    nr_min_move_pips: float = 5.0
+    nr_wait_minutes: int = 2  # ile minut po zamknięciu świecy zdarzenia czekamy (spread wraca do normy)
+    nr_mode: str = "momentum"  # "momentum" = w kierunku ruchu, "fade" = przeciw
+    nr_sl_pips: float = 10.0
+    nr_tp_rr: float = 1.5
     # swing_v1: wybicie kanału z ostatnich N świec H4 w kierunku trendu H4, trailing stop k*ATR(H4)
     swing_lookback_h4: int = 20
     swing_atr_period_h4: int = 14

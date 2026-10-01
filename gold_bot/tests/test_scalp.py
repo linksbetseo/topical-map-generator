@@ -108,3 +108,60 @@ class LondonBreakoutTest(unittest.TestCase):
             per_day[key] = per_day.get(key, 0) + 1
             self.assertTrue(7 <= t.entry_time.hour < 11, t.entry_time)
         self.assertTrue(all(v == 1 for v in per_day.values()))
+
+
+class NewsReactionTest(unittest.TestCase):
+    def _bars(self, day, shock_pips, ev_utc_hour):
+        from goldbot.models import BidAskBar
+        out, p, sp = [], 1.15000, 0.00002
+        t = day.replace(hour=ev_utc_hour - 2, minute=0)
+        while t < day.replace(hour=ev_utc_hour + 1, minute=0):
+            o = p
+            if (t.hour, t.minute) == (ev_utc_hour, 30):
+                c = p + shock_pips * 0.0001
+            else:
+                c = p + (0.00002 if t.minute % 2 else -0.00002)
+            h, l = max(o, c) + 0.00001, min(o, c) - 0.00001
+            out.append(BidAskBar(t, o, h, l, c, o + sp, h + sp, l + sp, c + sp, 10))
+            p = c
+            t += timedelta(minutes=1)
+        return out
+
+    def _run(self, bars, mode):
+        from goldbot.config import CalendarConfig, StrategyConfig
+        cfg = BotConfig(instrument=FX, risk=RiskConfig(risk_per_trade_pct=1.0, max_spread=0.0004),
+                        strategy=StrategyConfig(name="news_reaction_v1", nr_mode=mode, nr_shock_atr=4.0, nr_wait_minutes=2,
+                                                nr_sl_pips=10.0, nr_tp_rr=1.5, max_hold_minutes=60),
+                        session=replace(SESSION, trade_window_start="11:00", trade_window_end="16:00"),
+                        calendar=CalendarConfig(blackout_before_minutes=0, blackout_after_minutes=0))
+        eng = Engine(cfg)
+        for b in bars:
+            eng.on_bar(b)
+        return eng
+
+    def test_momentum_and_fade_after_shock_dst_aware(self):
+        summer = datetime(2026, 6, 5, tzinfo=timezone.utc)  # EDT: 08:30 NY = 12:30 UTC
+        winter = datetime(2026, 2, 6, tzinfo=timezone.utc)  # EST: 08:30 NY = 13:30 UTC
+        for day, hour in ((summer, 12), (winter, 13)):
+            bars = self._bars(day, +12, hour)
+            mom = [r for r in self._run(bars, "momentum").journal.records if r["kind"] == "entry"]
+            fade = [r for r in self._run(bars, "fade").journal.records if r["kind"] == "entry"]
+            self.assertEqual(len(mom), 1, day)
+            self.assertEqual(mom[0]["side"], Side.LONG)
+            self.assertEqual(fade[0]["side"], Side.SHORT)
+            self.assertEqual(mom[0]["time"], day.replace(hour=hour, minute=33))  # świeca zdarzenia zamyka się 12:31/13:31, +2 min czekania
+        no_shock = self._bars(summer, +0.2, 12)
+        self.assertEqual([r for r in self._run(no_shock, "momentum").journal.records if r["kind"] == "entry"], [])
+
+
+class EventStudyTest(unittest.TestCase):
+    def test_finds_shock_and_measures_after_spread(self):
+        from goldbot.event_study import study
+        bars = NewsReactionTest()._bars(datetime(2026, 6, 5, tzinfo=timezone.utc), +12, 12)
+        r = study(bars, k_atr=4.0, min_move=5.0, wait=2, horizons=(5, 15))
+        self.assertEqual(r["summary"]["events"], 1)
+        row = r["rows"][0]
+        self.assertEqual(row["dir"], 1)
+        self.assertEqual(row["entry_time"], datetime(2026, 6, 5, 12, 33, tzinfo=timezone.utc))
+        # ruch po szoku jest płaski (+-0,2 pipsa), więc momentum ~ -spread, fade ~ -spread - prowizja
+        self.assertLess(r["summary"][5]["momentum_mean"], 0)
