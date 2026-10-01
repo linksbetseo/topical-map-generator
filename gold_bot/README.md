@@ -134,6 +134,13 @@ Wynik: `results/2026-05-01_2026-09-28_btc_binance.md` — **obie strategie ze z�
 kosztów** (90 kombinacji siatki, żadna dodatnia in-sample); na spocie 1× z 500 USD depozyt, nie ryzyko, ogranicza
 wielkość pozycji, a prowizje zjadają 150–350 USD.
 
+### Forex: bot daily, 1:50, scalping — badanie
+
+`docs/forex_scalping_daily_bot.md`: zmierzony spread EURUSD (0,2 pipsa w sesji), koszt okrągłej transakcji ≈ 1,2 pipsa,
+próg rentowności scalpu 4/3 = **74 % trafień**, ESMA 1:30 vs 1:50, mikro-lot vs 500 USD, dlaczego scalping trzeba
+testować na tickach. Silnik ma tryb tickowy (`backtest --ticks DIR --data warmup.csv --ticks-start ...`),
+stop czasowy, okno sesji i `flat_at`; `config.eurusd.toml` + `scalp_meanrev_v1` to pierwsza hipoteza.
+
 ### 7 miesięcy złota — werdykt
 
 `results/2026-03-02_2026-09-25_gold_7m.md`: na marzec–wrzesień 2026 (krach −16 %, zjazd, rajd) tylko
