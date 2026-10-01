@@ -141,6 +141,10 @@ próg rentowności scalpu 4/3 = **74 % trafień**, ESMA 1:30 vs 1:50, mikro-lot 
 testować na tickach. Silnik ma tryb tickowy (`backtest --ticks DIR --data warmup.csv --ticks-start ...`),
 stop czasowy, okno sesji i `flat_at`; `config.eurusd.toml` + `scalp_meanrev_v1` to pierwsza hipoteza.
 
+Wynik na 8 tygodniach EURUSD: `results/2026-08-03_2026-09-25_eurusd_scalp.md` — **scalp mean-reversion traci
+w każdym z 36 zestawów już in-sample** (−10…−62 %), a bez prowizji i poślizgu jest na zerze (PF 0,9–1,0): logika nie ma
+przewagi, koszty ją dobijają. Infrastruktura bota daily (mikro-loty, okno sesji, flat, stop czasowy) działa.
+
 ### 7 miesięcy złota — werdykt
 
 `results/2026-03-02_2026-09-25_gold_7m.md`: na marzec–wrzesień 2026 (krach −16 %, zjazd, rajd) tylko
