@@ -85,7 +85,8 @@ class InstrumentSpec:
     swap_short_per_lot_per_night: float = -0.0
     triple_swap_weekday: int = 2  # 0 = poniedziałek, 2 = środa
     leverage: float = 20.0
-    slippage_per_oz: float = 0.05  # USD, doliczany niekorzystnie do każdego wykonania rynkowego/stop
+    slippage_per_oz: float = 0.05  # jednostki ceny na 1 jednostkę instrumentu (XAU: USD/oz; EURUSD: 0.00002 = 0.2 pipsa)
+    pip_size: float = 0.01  # XAU: 0.01; pary FX: 0.0001 (JPY: 0.01) - używane przez strategie w pipsach
 
     @property
     def min_volume_oz(self) -> float:

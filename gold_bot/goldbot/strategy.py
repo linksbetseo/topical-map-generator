@@ -39,6 +39,10 @@ class TrendPullbackStrategy:
         self.h4_ema.update(bar.close)
         self.h4_close = bar.close
 
+    def on_m1(self, bar: Bar) -> Signal | None:
+        """Hook dla strategii decydujących na M1 (scalping). Domyślnie nic."""
+        return None
+
     def trend(self) -> str | None:
         f, s = self.h1_fast.value, self.h1_slow.value
         if f is None or s is None or self.h1_close is None:
@@ -199,12 +203,66 @@ class SwingStrategy(TrendPullbackStrategy):
         return ext + self.cfg.swing_trail_atr * atr
 
 
+class ScalpMeanRevStrategy(TrendPullbackStrategy):
+    """Scalping M1: cena odchyla się od EMA(M1) o >= k*ATR(M1) i świeca zamyka się z powrotem w stronę EMA
+    (pierwsza oznaka wygaszenia impulsu) -> wejście w stronę EMA ze stałym SL/TP w pipsach.
+
+    Decyzja na zamknięciu M1, wejście na następnym ticku / otwarciu M1. Stop czasowy i okno sesji
+    są w konfiguracji (strategy.max_hold_minutes, session.trade_window_*). Przy koszcie okrągłej
+    transakcji ~1 pips (spread + prowizja) cel 3 pipsy oddaje ~1/3 w kosztach - to jest hipoteza do obalenia.
+    """
+
+    name = "scalp_meanrev_v1"
+
+    def __init__(self, cfg: StrategyConfig, pip_size: float = 0.0001):
+        super().__init__(cfg)
+        self.pip = pip_size
+        self.ema_m1 = EMA(cfg.scalp_ema_m1)
+        self.atr_m1 = ATR(cfg.scalp_atr_m1)
+        self.prev_m1: Bar | None = None
+
+    def on_m15(self, bar: Bar) -> Signal | None:
+        self.rsi.update(bar.close)
+        self.atr.update(bar.high, bar.low, bar.close)
+        return None
+
+    def on_m1(self, bar: Bar) -> Signal | None:
+        ema = self.ema_m1.update(bar.close)
+        atr = self.atr_m1.update(bar.high, bar.low, bar.close)
+        prev, self.prev_m1 = self.prev_m1, bar
+        if ema is None or atr is None or prev is None:
+            return None
+        atr_pips = atr / self.pip
+        if not (self.cfg.scalp_min_atr_pips <= atr_pips <= self.cfg.scalp_max_atr_pips):
+            return None
+        dev = self.cfg.scalp_dev_atr * atr
+        side = None
+        # poprzednia świeca rozciągnięta poniżej EMA, bieżąca zamyka wyżej niż poprzednia -> long w stronę EMA
+        if prev.close < ema - dev and bar.close > prev.close and bar.close < ema:
+            side = Side.LONG
+        elif prev.close > ema + dev and bar.close < prev.close and bar.close > ema:
+            side = Side.SHORT
+        if side is None or not self.allowed(side):
+            return None
+        return Signal(
+            side=side,
+            sl_distance=self.cfg.scalp_sl_pips * self.pip,
+            tp_distance=self.cfg.scalp_tp_pips * self.pip,
+            decided_at=bar.time + timedelta(minutes=1),
+            reason=f"{self.name}: odchylenie {(bar.close - ema) / self.pip:.1f} pips od EMA, ATR {atr_pips:.2f} pips",
+            features={"ema": round(ema, 6), "atr_pips": round(atr_pips, 2), "close": bar.close, "prev_close": prev.close},
+        )
+
+
 STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy,
-              SwingStrategy.name: SwingStrategy}
+              SwingStrategy.name: SwingStrategy, ScalpMeanRevStrategy.name: ScalpMeanRevStrategy}
 
 
-def build_strategy(cfg: StrategyConfig) -> TrendPullbackStrategy:
+def build_strategy(cfg: StrategyConfig, pip_size: float = 0.0001) -> TrendPullbackStrategy:
     try:
-        return STRATEGIES[cfg.name](cfg)
+        cls = STRATEGIES[cfg.name]
     except KeyError:
         raise ValueError(f"Nieznana strategia '{cfg.name}'. Dostępne: {sorted(STRATEGIES)}") from None
+    if cls is ScalpMeanRevStrategy:
+        return cls(cfg, pip_size)
+    return cls(cfg)

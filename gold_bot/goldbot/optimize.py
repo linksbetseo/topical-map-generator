@@ -29,6 +29,12 @@ GRIDS = {
         "swing_trail_atr": [1.5, 2.0, 3.0],
         "tp_atr_mult": [6.0, 10.0],
     },
+    "scalp_meanrev_v1": {
+        "scalp_dev_atr": [1.5, 2.0, 3.0],
+        "scalp_sl_pips": [3.0, 5.0],
+        "scalp_tp_pips": [2.0, 3.0, 5.0],
+        "max_hold_minutes": [15, 45],
+    },
     "breakout_v1": {
         "sl_atr_mult": [1.0, 1.5, 2.0],
         "tp_atr_mult": [1.5, 2.0, 3.0],

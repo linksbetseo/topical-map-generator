@@ -35,6 +35,15 @@ class StrategyConfig:
     tp_atr_mult: float = 2.0
     min_atr: float = 0.5
     max_atr: float = 40.0
+    max_hold_minutes: int = 0  # stop czasowy: zamknij pozycję po N minutach (0 = wyłączony)
+    # scalp_meanrev_v1: odchylenie od EMA(M1) o k*ATR(M1), wejście w stronę EMA, SL/TP w pipsach
+    scalp_ema_m1: int = 20
+    scalp_atr_m1: int = 14
+    scalp_dev_atr: float = 2.0
+    scalp_sl_pips: float = 4.0
+    scalp_tp_pips: float = 3.0
+    scalp_min_atr_pips: float = 0.5  # martwy rynek = brak wejść
+    scalp_max_atr_pips: float = 4.0  # zbyt nerwowy = brak wejść
     # swing_v1: wybicie kanału z ostatnich N świec H4 w kierunku trendu H4, trailing stop k*ATR(H4)
     swing_lookback_h4: int = 20
     swing_atr_period_h4: int = 14
@@ -54,6 +63,9 @@ class SessionConfig:
     no_new_entries_friday_after: str = "19:00"
     close_before_weekend_at: str = "20:45"  # piątek, UTC; pusty napis = nie zamykaj
     rollover_utc: str = "21:00"  # moment naliczania finansowania overnight
+    trade_window_start: str = ""  # nowe wejścia tylko w oknie [start, end) UTC; pusty = brak ograniczenia
+    trade_window_end: str = ""
+    flat_at: str = ""  # codziennie o tej godzinie UTC zamknij wszystko (bot "daily")
     max_entry_delay_minutes: int = 3  # jeśli następna świeca przychodzi później - anuluj wejście
     max_data_gap_minutes: int = 10  # przerwa w danych unieważnia bieżącą decyzję
 

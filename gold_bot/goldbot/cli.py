@@ -15,6 +15,8 @@ from goldbot.data.loaders import load_common_csv, load_dukascopy_pair, save_comm
 
 
 def _load_bars(args):
+    if getattr(args, "ticks", None) and not args.data:
+        return []
     if args.data:
         return load_common_csv(args.data)
     if args.bid and args.ask:
@@ -50,7 +52,7 @@ def cmd_synth(args):
 def cmd_fetch(args):
     from datetime import date
     from goldbot.data.dukascopy_feed import DukascopyDownloader
-    dl = DukascopyDownloader(cache_dir=args.cache, delay_seconds=args.delay)
+    dl = DukascopyDownloader(cache_dir=args.cache, symbol=args.symbol, delay_seconds=args.delay)
     start, end = date.fromisoformat(args.start), date.fromisoformat(args.end)
     def progress(day, n):
         if day.weekday() == 4 or day == end:
@@ -104,7 +106,7 @@ def cmd_backtest(args):
     cfg = _apply_overrides(load_config(args.config), args)
     bars = _load_bars(args)
     rep = quality.check(bars)
-    if not rep.ok:
+    if not rep.ok and bars:
         print("Dane nie przeszły kontroli jakości:", json.dumps(rep.as_dict(), indent=2))
         if not args.force:
             return 1
@@ -112,6 +114,18 @@ def cmd_backtest(args):
     out = Path(args.out)
     variants = ["A", "B"] if args.variant == "AB" else [args.variant]
     results = []
+    ticks = None
+    if getattr(args, "ticks", None):
+        from goldbot.data.dukascopy_ticks import iter_ticks_dir
+        from goldbot.data.loaders import parse_time
+        t0 = parse_time(args.ticks_start) if args.ticks_start else None
+        t1 = parse_time(args.ticks_end) if args.ticks_end else None
+        if bars and t0 is None:
+            sys.exit("Przy --ticks z --data (rozgrzewka) podaj --ticks-start, żeby rozgrzewka kończyła się przed tickami")
+        if bars:
+            bars = [b for b in bars if b.time < t0]
+        ticks = list(iter_ticks_dir(args.ticks, cfg.instrument.symbol, t0, t1))
+        print(f"Ticki: {len(ticks)} ({args.ticks}); rozgrzewka: {len(bars)} świec M1")
     for v in variants:
         flt = None
         if v == "B":
@@ -120,7 +134,7 @@ def cmd_backtest(args):
             if not args.news:
                 sys.exit("Wariant B wymaga --news (JSONL z komunikatami)")
             flt = JevNewsFilter(cfg.jev, NewsStore(load_news_jsonl(args.news)))
-        results.append(run_variant(bars, cfg, v, flt, cal, out, splits=args.splits))
+        results.append(run_variant(bars, cfg, v, flt, cal, out, splits=args.splits, ticks=ticks))
     print(f"Dane: {rep.first} -> {rep.last}, świec: {rep.bars}, wydarzeń w kalendarzu: {len(cal)}")
     print(format_comparison(results))
     for r in results:
@@ -195,7 +209,8 @@ def main(argv=None) -> int:
     p.add_argument("--out", default="data/synthetic_m1.csv")
     p.set_defaults(fn=cmd_synth)
 
-    p = sub.add_parser("fetch", help="pobierz historię M1 bid/ask XAUUSD z publicznego feedu Dukascopy")
+    p = sub.add_parser("fetch", help="pobierz historię M1 bid/ask (XAUUSD, EURUSD, ...) z publicznego feedu Dukascopy")
+    p.add_argument("--symbol", default="XAUUSD")
     p.add_argument("--start", required=True, help="YYYY-MM-DD (UTC)")
     p.add_argument("--end", required=True)
     p.add_argument("--out", default="data/xauusd_m1.csv")
@@ -224,7 +239,10 @@ def main(argv=None) -> int:
     p.add_argument("--ics", action="append", help="kalendarz ICS (np. BLS)")
     p.add_argument("--news", help="JSONL komunikatów dla filtra Jev")
     p.add_argument("--variant", choices=["A", "B", "AB"], default="A")
-    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1"], help="nadpisz strategy.name")
+    p.add_argument("--ticks", help="katalog z tickami Dukascopy (tryb tickowy; --data = rozgrzewka M1)")
+    p.add_argument("--ticks-start", help="ISO; od kiedy brać ticki (rozgrzewka M1 do tej chwili)")
+    p.add_argument("--ticks-end", help="ISO; do kiedy")
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1"], help="nadpisz strategy.name")
     p.add_argument("--direction", choices=["both", "long", "short"], help="nadpisz strategy.direction")
     p.add_argument("--risk-pct", type=float, help="nadpisz risk.risk_per_trade_pct")
     p.add_argument("--daily-loss-pct", type=float, help="nadpisz risk.max_daily_loss_pct")
@@ -238,7 +256,7 @@ def main(argv=None) -> int:
     p.add_argument("--config")
     p.add_argument("--events", action="append")
     p.add_argument("--ics", action="append")
-    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1"])
+    p.add_argument("--strategy", choices=["trend_pullback_v1", "breakout_v1", "swing_v1", "scalp_meanrev_v1"])
     p.add_argument("--direction", choices=["both", "long", "short"])
     p.add_argument("--risk-pct", type=float)
     p.add_argument("--daily-loss-pct", type=float)

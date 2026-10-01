@@ -11,16 +11,29 @@ from goldbot.engine import Engine
 from goldbot.filters.base import SignalFilter
 from goldbot.journal import Journal, write_trades_csv
 from goldbot.metrics import by_period, trade_stats
-from goldbot.models import BidAskBar
+from goldbot.models import BidAskBar, Quote
+from typing import Iterable
 
 
 def run_variant(bars: list[BidAskBar], cfg: BotConfig, variant: str, signal_filter: SignalFilter | None = None,
-                calendar: EventCalendar | None = None, out_dir: str | Path | None = None, splits: int = 1) -> dict:
+                calendar: EventCalendar | None = None, out_dir: str | Path | None = None, splits: int = 1,
+                ticks: Iterable[Quote] | None = None) -> dict:
+    """`bars` = świece M1 (tryb świecowy) albo - gdy podano `ticks` - rozgrzewka wskaźników przed pierwszym tickiem."""
     out = Path(out_dir) if out_dir else None
     journal = Journal(out / f"decisions_{variant}.jsonl" if out else None, variant=variant)
     engine = Engine(cfg, signal_filter=signal_filter, calendar=calendar, journal=journal)
-    for b in bars:
-        engine.on_bar(b)
+    if ticks is None:
+        for b in bars:
+            engine.on_bar(b)
+    else:
+        from goldbot.paper import warmup
+        n_warm = warmup(engine, bars)
+        engine.stats["warmup_bars"] = n_warm
+        for q in ticks:
+            engine.on_tick(q)
+        last = engine._tick_m1.flush()
+        if last is not None:
+            engine._on_bar_core(last, exits_handled=True)
     engine.finish()
     journal.close()
     acc = engine.account
@@ -37,8 +50,10 @@ def run_variant(bars: list[BidAskBar], cfg: BotConfig, variant: str, signal_filt
         **trade_stats(acc.trades),
         "engine": dict(sorted(engine.stats.items())),
     }
-    if bars and splits > 1:
-        result["periods"] = by_period(acc.trades, bars[0].time, bars[-1].time, splits)
+    if splits > 1 and acc.trades:
+        t0 = acc.trades[0].entry_time if ticks is not None or not bars else bars[0].time
+        t1 = acc.trades[-1].exit_time if ticks is not None or not bars else bars[-1].time
+        result["periods"] = by_period(acc.trades, t0, t1, splits)
     jf = getattr(signal_filter, "classifier", None)
     if jf is not None:
         result["jev_usage"] = {"calls": jf.calls, "input_chars": jf.input_chars,

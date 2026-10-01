@@ -16,10 +16,10 @@ from datetime import datetime, time, timedelta
 
 from goldbot.calendar import EventCalendar
 from goldbot.config import BotConfig
-from goldbot.data.resample import BarAggregator
+from goldbot.data.resample import BarAggregator, TickToM1
 from goldbot.filters.base import SignalFilter
 from goldbot.journal import Journal
-from goldbot.models import Bar, BidAskBar, Side, Signal
+from goldbot.models import Bar, BidAskBar, Quote, Side, Signal
 from goldbot.risk import size_position
 from goldbot.simulator import Account
 from goldbot.strategy import TrendPullbackStrategy, build_strategy
@@ -42,7 +42,7 @@ class Engine:
                  signal_filter: SignalFilter | None = None, calendar: EventCalendar | None = None,
                  journal: Journal | None = None):
         self.cfg = cfg
-        self.strategy = strategy or build_strategy(cfg.strategy)
+        self.strategy = strategy or build_strategy(cfg.strategy, cfg.instrument.pip_size)
         self.filter = signal_filter or SignalFilter()
         self.calendar = calendar or EventCalendar()
         self.journal = journal or Journal()
@@ -65,6 +65,10 @@ class Engine:
         self._fri_cut = _hm(s.no_new_entries_friday_after)
         self._weekend_close = _hm(s.close_before_weekend_at)
         self._rollover = _hm(s.rollover_utc)
+        self._window = (_hm(s.trade_window_start), _hm(s.trade_window_end))
+        self._flat_at = _hm(s.flat_at)
+        self._tick_m1 = TickToM1()
+        self.last_tick_time: datetime | None = None
 
     # --- sesja ------------------------------------------------------------------------
     def entries_allowed(self, t: datetime) -> tuple[bool, str]:
@@ -77,6 +81,11 @@ class Engine:
         b0, b1 = self._break
         if b0 and b1 and (b0 <= tt < b1 if b0 < b1 else tt >= b0 or tt < b1):
             return False, "daily_break"
+        w0, w1 = self._window
+        if w0 and w1 and not (w0 <= tt < w1 if w0 < w1 else tt >= w0 or tt < w1):
+            return False, "outside_trade_window"
+        if self._flat_at and tt >= self._flat_at and (not w0 or w0 < self._flat_at):
+            return False, "after_flat_at"
         return True, ""
 
     def _rollovers_between(self, a: datetime, b: datetime) -> list[datetime]:
@@ -92,7 +101,37 @@ class Engine:
         return out
 
     # --- główna pętla -----------------------------------------------------------------
+    def on_tick(self, q: Quote) -> None:
+        """Tryb tickowy: wejścia i SL/TP sprawdzane na każdym ticku (bez niejednoznaczności świecy),
+        decyzje strategii po zamknięciu świecy M1 zbudowanej z ticków."""
+        if self.last_tick_time is not None and q.time < self.last_tick_time:
+            self.stats["ticks_skipped_non_monotonic"] += 1
+            return
+        if q.bid <= 0 or q.ask < q.bid:
+            self.stats["ticks_invalid"] += 1
+            return
+        self.last_tick_time = q.time
+        self.stats["ticks"] += 1
+        tick_bar = BidAskBar(q.time, q.bid, q.bid, q.bid, q.bid, q.ask, q.ask, q.ask, q.ask)
+        self._fill_pending(tick_bar)
+        self._forced_closes(tick_bar)
+        self._time_stops(tick_bar)
+        self._log_exits(self.account.check_exits(tick_bar), tick_bar.time)
+        m1 = self._tick_m1.update(q)
+        if m1 is not None:
+            self._on_bar_core(m1, exits_handled=True)
+
     def on_bar(self, bar: BidAskBar) -> None:
+        self._on_bar_core(bar, exits_handled=False)
+
+    def _log_exits(self, trades, t: datetime) -> None:
+        for tr in trades:
+            self.journal.log(t, "exit", trade_id=tr.id, reason=tr.exit_reason, price=tr.exit_price,
+                             net_pnl=tr.net_pnl, ambiguous_bar=tr.ambiguous_bar)
+            if tr.ambiguous_bar:
+                self.stats["ambiguous_sl_tp_bars"] += 1
+
+    def _on_bar_core(self, bar: BidAskBar, exits_handled: bool) -> None:
         prev = self.last_bar
         if prev is not None and bar.time <= prev.time:
             self.stats["bars_skipped_non_monotonic"] += 1
@@ -113,13 +152,11 @@ class Engine:
             self.day = bar.time.date()
             self.day_start_equity = self.account.equity(bar.bid_open, bar.ask_open)
 
-        self._fill_pending(bar)
-        self._forced_closes(bar)
-        for tr in self.account.check_exits(bar):
-            self.journal.log(bar.time, "exit", trade_id=tr.id, reason=tr.exit_reason, price=tr.exit_price,
-                             net_pnl=tr.net_pnl, ambiguous_bar=tr.ambiguous_bar)
-            if tr.ambiguous_bar:
-                self.stats["ambiguous_sl_tp_bars"] += 1
+        if not exits_handled:
+            self._fill_pending(bar)
+            self._forced_closes(bar)
+            self._time_stops(bar)
+            self._log_exits(self.account.check_exits(bar), bar.time)
 
         self._mark(bar)
         self.last_bar = bar
@@ -134,6 +171,18 @@ class Engine:
             self._trail(b)
             if sig is not None:
                 self._decide(sig, bar)
+        sig = self.strategy.on_m1(mid)
+        if sig is not None:
+            self._decide(sig, bar)
+
+    def _time_stops(self, bar: BidAskBar) -> None:
+        n = self.cfg.strategy.max_hold_minutes
+        if not n or not self.account.positions:
+            return
+        for p in list(self.account.positions):
+            if bar.time - p.entry_time >= timedelta(minutes=n):
+                tr = self.account.close_at_market(p, bar, "time_stop")
+                self.journal.log(bar.time, "exit", trade_id=tr.id, reason="time_stop", price=tr.exit_price, net_pnl=tr.net_pnl)
 
     def _trail(self, m15: Bar) -> None:
         trail = getattr(self.strategy, "trail", None)
@@ -173,6 +222,8 @@ class Engine:
             self._reject(t, sig, "duplicate_decision")
             return
         self.decided_keys.add(t)
+        if self.pending is not None:
+            return self._reject(t, sig, "max_positions")
         if self.last_gap_at and self.last_gap_at > t - timedelta(minutes=15):
             return self._reject(t, sig, "data_gap")
         ok, why = self.entries_allowed(t)
@@ -228,7 +279,9 @@ class Engine:
         if not self.account.positions:
             return
         reason = None
-        if (self._weekend_close and not self.cfg.session.weekend_trading
+        if self._flat_at and bar.time.time() >= self._flat_at and self._flat_at > (self._window[0] or time(0, 0)):
+            reason = "flat_at"
+        elif (self._weekend_close and not self.cfg.session.weekend_trading
                 and bar.time.weekday() == 4 and bar.time.time() >= self._weekend_close):
             reason = "weekend_close"
         elif self.cfg.calendar.close_positions_before_event and self.calendar.events_near(

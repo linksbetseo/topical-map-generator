@@ -1,0 +1,58 @@
+# EURUSD, scalping, bot "daily": okno Londyn+NY, wszystko zamknięte przed końcem sesji NY.
+# Dźwignia 1:50 - UWAGA: w UE (ESMA) klient detaliczny ma na głównych parach maks. 1:30;
+# 1:50 wymaga statusu klienta profesjonalnego albo brokera spoza UE (inna ochrona, inny nadzór).
+
+[instrument]
+symbol = "EURUSD"
+contract_size = 100000.0          # 1 lot
+min_volume_lots = 0.01            # mikro-lot = 1000 EUR; 1 pips = 0,10 USD
+volume_step_lots = 0.01
+max_volume_lots = 5.0
+commission_per_lot_per_side = 3.5 # USD; 7 USD/lot w obie strony = 0,7 pipsa (typowe konto ECN/raw)
+commission_pct_per_side = 0.0
+swap_long_per_lot_per_night = -6.0   # orientacyjnie; pobierz z brokera. Bot daily i tak nie trzyma pozycji przez noc
+swap_short_per_lot_per_night = 2.0
+triple_swap_weekday = 2
+leverage = 50.0
+slippage_per_oz = 0.00002          # 0,2 pipsa na każde wykonanie rynkowe / stop
+pip_size = 0.0001
+
+[risk]
+initial_balance = 500.0
+risk_per_trade_pct = 1.0           # przy mikro-locie: SL 4 pipsy => 0,12 lota => ryzyko 4,8 USD + koszty. Działa.
+max_daily_loss_pct = 3.0           # bot daily: po 3 stratach z rzędu koniec dnia
+max_open_positions = 1
+max_spread = 0.0004                # 0,4 pipsa; szerszy = brak wejścia (noc, publikacje)
+max_margin_usage_pct = 60.0
+
+[strategy]
+name = "scalp_meanrev_v1"
+direction = "both"
+scalp_ema_m1 = 20
+scalp_atr_m1 = 14
+scalp_dev_atr = 2.0
+scalp_sl_pips = 4.0
+scalp_tp_pips = 3.0
+scalp_min_atr_pips = 0.5
+scalp_max_atr_pips = 4.0
+max_hold_minutes = 30
+min_atr = 0.0                      # nieużywane przez scalp
+max_atr = 1.0
+
+[session]
+weekend_trading = false
+daily_break_start = "21:55"        # EURUSD: krótka przerwa ok. 22:00 UTC u wielu brokerów - sprawdź u swojego
+daily_break_end = "22:05"
+no_new_entries_friday_after = "15:00"
+close_before_weekend_at = "16:00"
+rollover_utc = "22:00"
+trade_window_start = "07:00"       # Londyn
+trade_window_end = "16:00"         # koniec nakładania się z NY
+flat_at = "16:30"                  # codziennie flat
+max_entry_delay_minutes = 2
+max_data_gap_minutes = 10
+
+[calendar]
+blackout_before_minutes = 20
+blackout_after_minutes = 20
+close_positions_before_event = true   # scalp nie trzyma pozycji przez NFP/CPI/FOMC
