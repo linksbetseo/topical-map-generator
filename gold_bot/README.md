@@ -151,7 +151,9 @@ parametrów tych logik nie ma sensu — potrzebna jest informacja spoza samej ce
 
 Nowe hipotezy (informacja spoza ceny M1): `results/2026-10-01_fx_new_hypotheses.md` — **fade po szoku z danych USA (08:30 NY)
 na EURUSD** jest dodatni po kosztach w styczniu–marcu i sierpniu–wrześniu (parametry ustalone na IS, PF OOS 1,8–2,1),
-ale to 14 transakcji w 5 miesięcy i t ≈ 1,1 — za mało, by odróżnić od przypadku. Badanie zdarzeń: `goldbot/event_study.py`.
+ale to 14 transakcji w 5 miesięcy i t ≈ 1,1. Reguła (08:30 + 10:00 NY) została **zarejestrowana z góry** (`config.eurusd_news_fade.toml`,
+commit `3a00f14`) i **nie przeszła testu na kwietniu–lipcu** (−1,7 %, PF 0,17; łączne t spadło do 0,89) — odrzucona.
+Badanie zdarzeń: `goldbot/event_study.py`. Żadna z 6 hipotez forex nie przeszła testu na niezależnym okresie po kosztach.
 
 ### 7 miesięcy złota — werdykt
 

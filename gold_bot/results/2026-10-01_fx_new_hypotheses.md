@@ -73,3 +73,38 @@ Filtr usuwa prawie całą stratę stycznia–marca (−29 % → −1 %), ale zos
    14:00 NY w dni FOMC). Przy 4 parach × 3 porach × 9 miesięcy można dojść do 100+ zdarzeń — wtedy t > 2 albo hipoteza upada.
 3. Bot dzienny w sensie „codziennie handluje” nie wyłania się z żadnej z hipotez. Realistyczny kształt to bot, który
    **codziennie czuwa** i handluje tylko w dni, w których zachodzi warunek (publikacja + szok), 1–5 razy w miesiącu na parę.
+
+---
+
+## Test zarejestrowany z góry: kwiecień–lipiec 2026 — **NIEZALICZONY**
+
+Reguła zapisana w `config.eurusd_news_fade.toml` i wypchnięta w commicie `3a00f14` (1.10.2026, 12:10 UTC) **przed**
+uruchomieniem na kwietniu–lipcu: fade po szoku ≥ 3 ATR(M1) o 08:30 i 10:00 NY, SL 15 / TP 15 pipsów, wyjście po 60 min.
+Kryteria sukcesu zapisane w tym samym pliku: (1) dodatni wynik i PF > 1,2 na kwiecień–lipiec, (2) t > 2 łącznie dla 3 okresów.
+
+| okres | rola | zdarzenia | fade +60 min (śr., po kosztach) | trafień | w silniku |
+|---|---|---|---|---|---|
+| sty–mar | wyprowadzenie | 12 | +2,4 pipsa | 67 % | 12 trans., +1,4 %, PF 1,60 |
+| sie–wrz | wyprowadzenie | 8 | +7,5 pipsa | 75 % | 7 trans., +1,2 %, PF 2,14 |
+| **kwi–lip** | **test** | **6** | **−5,4 pipsa** | **33 %** | **6 trans., −1,7 %, PF 0,17** |
+| **razem** | | **26** | **+2,2 pipsa, t = 0,89** | | |
+
+Oba kryteria niespełnione. Łączne t spadło z 1,60 do 0,89 po dodaniu niezależnego okresu — to typowy obraz efektu,
+którego nie ma: wynik na danych, z których wyprowadzono regułę, był szumem, który przy nowych danych cofa się do zera.
+
+**Hipoteza odrzucona.** Zgodnie z zasadą zapisaną przed testem nie zmieniam parametrów i nie przenoszę tej reguły na inne pary
+(GBPUSD, USDJPY) — testowanie odrzuconej reguły na kolejnych instrumentach, aż „gdzieś zadziała”, to szukanie wyniku, nie badanie.
+Pobieranie tych par zostało zatrzymane.
+
+## Podsumowanie całego badania forex (EURUSD, 9 miesięcy 2026, koszty ECN, 500 USD)
+
+| hipoteza | wynik |
+|---|---|
+| scalp mean-reversion M1 (cel 2–5 pipsów) | odrzucona — brak przewagi brutto, −40…−80 % po kosztach |
+| wybicie M15, pullback M15 | odrzucone — ujemne w każdym okresie |
+| wybicie londyńskie (zakres azjatycki) | odrzucone — +7 % latem, −29 % w I kw. |
+| wybicie londyńskie + kompresja nocy | filtr strat, nie przewaga (4–15 transakcji) |
+| fade po szoku z danych USA (08:30 + 10:00 NY) | odrzucone w teście zarejestrowanym z góry (kwi–lip −1,7 %, t łącznie 0,89) |
+| reakcja na publikacje na złocie | odrzucone — brak spójnego kierunku |
+
+Żadna z sześciu hipotez nie przeszła testu na niezależnym okresie po kosztach.
