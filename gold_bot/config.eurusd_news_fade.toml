@@ -1,0 +1,55 @@
+# REGUŁA ZAREJESTROWANA Z GÓRY (pre-registered) - 1 października 2026, PRZED uruchomieniem na kwietniu-lipcu 2026.
+# Wyprowadzona wyłącznie z badania zdarzeń na EURUSD sty-mar i sie-wrz 2026 (results/2026-10-01_fx_new_hypotheses.md):
+#   fade po szoku >= 3 ATR(M1) o 08:30 i 10:00 Nowy Jork, n=20, +60 min: śr. +4,5 pipsa po kosztach, t=1,60, 70% trafień.
+# Test na kwietniu-lipcu ma być uruchomiony z tym plikiem BEZ ŻADNYCH ZMIAN. Zmiana parametrów po zobaczeniu wyniku
+# unieważnia test. Kryterium sukcesu: PF > 1,2 i dodatni wynik netto na kwiecień-lipiec ORAZ t > 2 na wszystkich 3 okresach łącznie.
+
+[instrument]
+symbol = "EURUSD"
+contract_size = 100000.0
+min_volume_lots = 0.01
+volume_step_lots = 0.01
+max_volume_lots = 5.0
+commission_per_lot_per_side = 3.5
+swap_long_per_lot_per_night = -6.0
+swap_short_per_lot_per_night = 2.0
+leverage = 50.0
+slippage_per_oz = 0.00005
+pip_size = 0.0001
+
+[risk]
+initial_balance = 500.0
+risk_per_trade_pct = 1.0
+max_daily_loss_pct = 3.0
+max_open_positions = 1
+max_spread = 0.0006
+max_margin_usage_pct = 60.0
+
+[strategy]
+name = "news_reaction_v1"
+nr_event_time = "08:30,10:00"
+nr_event_tz = "America/New_York"
+nr_shock_atr = 3.0
+nr_min_move_pips = 5.0
+nr_wait_minutes = 2
+nr_mode = "fade"
+nr_sl_pips = 15.0
+nr_tp_rr = 1.0
+max_hold_minutes = 60
+
+[session]
+daily_break_start = "21:55"
+daily_break_end = "22:05"
+no_new_entries_friday_after = "17:00"
+close_before_weekend_at = "20:00"
+rollover_utc = "22:00"
+trade_window_start = "12:00"
+trade_window_end = "15:30"
+flat_at = "16:30"
+max_entry_delay_minutes = 2
+max_data_gap_minutes = 10
+
+[calendar]
+blackout_before_minutes = 0
+blackout_after_minutes = 0
+close_positions_before_event = false

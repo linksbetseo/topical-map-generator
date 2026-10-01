@@ -273,12 +273,13 @@ class NewsReactionStrategy(TrendPullbackStrategy):
             raise ValueError(f"strategy.nr_mode: '{cfg.nr_mode}' (momentum | fade)")
         self.pip = pip_size
         self.tz = ZoneInfo(cfg.nr_event_tz)
-        self.ev_h, self.ev_m = (int(x) for x in cfg.nr_event_time.split(":"))
+        # jedna albo kilka pór, np. "08:30,10:00"; każda pora = osobne zdarzenie, maks. jedna próba na zdarzenie
+        self.events = [tuple(int(x) for x in t.strip().split(":")) for t in cfg.nr_event_time.split(",") if t.strip()]
         self.atr_m1 = ATR(30)
         self.prev_close: float | None = None
         self.day = None
         self.shock: dict | None = None  # {"dir": +1/-1, "close": float, "at": datetime}
-        self.done = False
+        self.tried: set[tuple[int, int]] = set()
 
     def on_m15(self, bar: Bar) -> Signal | None:
         self.rsi.update(bar.close)
@@ -288,16 +289,17 @@ class NewsReactionStrategy(TrendPullbackStrategy):
     def on_m1(self, bar: Bar) -> Signal | None:
         local = bar.time.astimezone(self.tz)
         if local.date() != self.day:
-            self.day, self.shock, self.done = local.date(), None, False
+            self.day, self.shock, self.tried = local.date(), None, set()
         atr_before = self.atr_m1.value  # ATR sprzed tej świecy
         prev_close, self.prev_close = self.prev_close, bar.close
         self.atr_m1.update(bar.high, bar.low, bar.close)
-        if self.done or atr_before is None or prev_close is None or local.weekday() >= 5:
+        if atr_before is None or prev_close is None or local.weekday() >= 5:
             return None
-        if (local.hour, local.minute) == (self.ev_h, self.ev_m):
+        hm = (local.hour, local.minute)
+        if hm in self.events and hm not in self.tried:
             move = bar.close - prev_close
             if abs(move) >= self.cfg.nr_shock_atr * atr_before and abs(move) / self.pip >= self.cfg.nr_min_move_pips:
-                self.shock = {"dir": 1 if move > 0 else -1, "close": bar.close, "base": prev_close,
+                self.shock = {"dir": 1 if move > 0 else -1, "close": bar.close, "base": prev_close, "event": hm,
                               "move_pips": move / self.pip, "atr_pips": atr_before / self.pip, "at": bar.time}
             return None
         if self.shock is None:
@@ -305,9 +307,12 @@ class NewsReactionStrategy(TrendPullbackStrategy):
         minutes_after = (bar.time - self.shock["at"]).total_seconds() / 60
         if minutes_after < self.cfg.nr_wait_minutes:
             return None
-        self.done = True  # jedna próba na zdarzenie, niezależnie od wyniku warunku
-        d = self.shock["dir"]
-        if (bar.close - self.shock["base"]) * d <= 0:  # ruch już się w pełni cofnął - brak sygnału
+        self.tried.add(self.shock["event"])  # jedna próba na zdarzenie, niezależnie od wyniku warunku
+        self.shock, shock = None, self.shock
+        if shock is None:
+            return None
+        d = shock["dir"]
+        if (bar.close - shock["base"]) * d <= 0:  # ruch już się w pełni cofnął - brak sygnału
             return None
         side = (Side.LONG if d > 0 else Side.SHORT) if self.cfg.nr_mode == "momentum" else (Side.SHORT if d > 0 else Side.LONG)
         if not self.allowed(side):
@@ -316,9 +321,9 @@ class NewsReactionStrategy(TrendPullbackStrategy):
         return Signal(
             side=side, sl_distance=sl, tp_distance=self.cfg.nr_tp_rr * sl,
             decided_at=bar.time + timedelta(minutes=1),
-            reason=f"{self.name}/{self.cfg.nr_mode}: ruch {self.shock['move_pips']:+.1f} pips przy ATR {self.shock['atr_pips']:.2f}",
-            features={"move_pips": round(self.shock["move_pips"], 1), "atr_pips": round(self.shock["atr_pips"], 2),
-                      "minutes_after": minutes_after},
+            reason=f"{self.name}/{self.cfg.nr_mode} {shock['event'][0]:02d}:{shock['event'][1]:02d}: ruch {shock['move_pips']:+.1f} pips przy ATR {shock['atr_pips']:.2f}",
+            features={"move_pips": round(shock["move_pips"], 1), "atr_pips": round(shock["atr_pips"], 2),
+                      "minutes_after": minutes_after, "event": f"{shock['event'][0]:02d}:{shock['event'][1]:02d}"},
         )
 
 

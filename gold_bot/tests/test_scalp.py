@@ -165,3 +165,32 @@ class EventStudyTest(unittest.TestCase):
         self.assertEqual(row["entry_time"], datetime(2026, 6, 5, 12, 33, tzinfo=timezone.utc))
         # ruch po szoku jest płaski (+-0,2 pipsa), więc momentum ~ -spread, fade ~ -spread - prowizja
         self.assertLess(r["summary"][5]["momentum_mean"], 0)
+
+
+class NewsMultiEventTest(unittest.TestCase):
+    def test_two_event_times_each_tried_once(self):
+        from goldbot.config import CalendarConfig, StrategyConfig
+        from goldbot.models import BidAskBar
+        day = datetime(2026, 6, 5, tzinfo=timezone.utc)  # EDT: 08:30 NY = 12:30 UTC, 10:00 NY = 14:00 UTC
+        bars, p, sp = [], 1.15, 0.00002
+        t = day.replace(hour=10)
+        while t < day.replace(hour=16):
+            o = p
+            if (t.hour, t.minute) in ((12, 30), (14, 0)):
+                c = p + 0.0012
+            else:
+                c = p + (0.00002 if t.minute % 2 else -0.00002)
+            h, l = max(o, c) + 0.00001, min(o, c) - 0.00001
+            bars.append(BidAskBar(t, o, h, l, c, o + sp, h + sp, l + sp, c + sp, 10))
+            p, t = c, t + timedelta(minutes=1)
+        cfg = BotConfig(instrument=FX, risk=RiskConfig(risk_per_trade_pct=1.0, max_spread=0.0004),
+                        strategy=StrategyConfig(name="news_reaction_v1", nr_event_time="08:30,10:00", nr_mode="fade",
+                                                nr_shock_atr=3.0, nr_sl_pips=15.0, nr_tp_rr=1.0, max_hold_minutes=60),
+                        session=replace(SESSION, trade_window_start="11:00", trade_window_end="16:00"),
+                        calendar=CalendarConfig(blackout_before_minutes=0, blackout_after_minutes=0))
+        eng = Engine(cfg)
+        for b in bars:
+            eng.on_bar(b)
+        entries = [r for r in eng.journal.records if r["kind"] == "entry"]
+        self.assertEqual([e["time"].hour for e in entries], [12, 14])
+        self.assertTrue(all(e["side"] is Side.SHORT for e in entries))  # fade po wzroście
