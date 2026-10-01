@@ -144,6 +144,8 @@ stop czasowy, okno sesji i `flat_at`; `config.eurusd.toml` + `scalp_meanrev_v1` 
 Wynik na 8 tygodniach EURUSD: `results/2026-08-03_2026-09-25_eurusd_scalp.md` — **scalp mean-reversion traci
 w każdym z 36 zestawów już in-sample** (−10…−62 %), a bez prowizji i poślizgu jest na zerze (PF 0,9–1,0): logika nie ma
 przewagi, koszty ją dobijają. Infrastruktura bota daily (mikro-loty, okno sesji, flat, stop czasowy) działa.
+Za to `london_breakout_v1` (wybicie zakresu azjatyckiego po otwarciu Londynu, 1–2 wejścia dziennie, SL 8 / TP 12–16 pipsów)
+jest **pierwszą strategią z dodatnim IS i OOS po kosztach** (PF 1,3–1,9) — na 34 transakcjach, więc to kandydat, nie dowód.
 
 ### 7 miesięcy złota — werdykt
 
