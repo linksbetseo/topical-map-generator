@@ -116,7 +116,10 @@ class Engine:
         self._fill_pending(tick_bar)
         self._forced_closes(tick_bar)
         self._time_stops(tick_bar)
-        self._log_exits(self.account.check_exits(tick_bar), tick_bar.time)
+        exits = self.account.check_exits(tick_bar)
+        for tr in exits:  # na pojedynczym ticku "luka" to po prostu pierwszy tick za poziomem
+            tr.exit_reason = tr.exit_reason.replace("_gap", "")
+        self._log_exits(exits, tick_bar.time)
         m1 = self._tick_m1.update(q)
         if m1 is not None:
             self._on_bar_core(m1, exits_handled=True)
