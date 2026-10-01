@@ -88,3 +88,23 @@ class ScalpEngineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LondonBreakoutTest(unittest.TestCase):
+    def test_one_entry_per_direction_and_within_window(self):
+        from goldbot.config import StrategyConfig
+        cfg = BotConfig(instrument=FX, risk=RiskConfig(risk_per_trade_pct=1.0, max_daily_loss_pct=3.0, max_spread=0.0004),
+                        strategy=StrategyConfig(name="london_breakout_v1", lb_min_range_pips=2.0, max_hold_minutes=240),
+                        session=SESSION)
+        bars = fx_bars(days=25, seed=9)
+        eng = Engine(cfg)
+        for b in bars:
+            eng.on_bar(b)
+        eng.finish()
+        self.assertGreater(len(eng.account.trades), 0)
+        per_day = {}
+        for t in eng.account.trades:
+            key = (t.entry_time.date(), t.side)
+            per_day[key] = per_day.get(key, 0) + 1
+            self.assertTrue(7 <= t.entry_time.hour < 11, t.entry_time)
+        self.assertTrue(all(v == 1 for v in per_day.values()))

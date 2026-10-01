@@ -254,8 +254,64 @@ class ScalpMeanRevStrategy(TrendPullbackStrategy):
         )
 
 
+class LondonBreakoutStrategy(TrendPullbackStrategy):
+    """Bot "daily": zakres sesji azjatyckiej (domyślnie 00:00-07:00 UTC) -> po otwarciu Londynu wejście,
+    gdy M1 zamyka się poza zakresem. Stop = min(lb_sl_pips, zakres), cel = lb_tp_rr * stop, maks. jedno
+    wejście na kierunek dziennie, tylko do lb_entry_until. Reszta (flat_at, stop czasowy, limit straty) w silniku.
+
+    1-2 transakcje dziennie, cel 10-15 pipsów: koszt 1,2 pipsa to <10 % celu, próg rentowności ~45 % trafień.
+    To hipoteza po doświadczeniu ze scalpem (koszt ~35 % celu, próg 74 %).
+    """
+
+    name = "london_breakout_v1"
+
+    def __init__(self, cfg: StrategyConfig, pip_size: float = 0.0001):
+        super().__init__(cfg)
+        self.pip = pip_size
+        self.day = None
+        self.range_hi = self.range_lo = None
+        self.done: set[Side] = set()
+        self._t = lambda s: tuple(int(x) for x in s.split(":"))
+
+    def on_m15(self, bar: Bar) -> Signal | None:
+        self.rsi.update(bar.close)
+        self.atr.update(bar.high, bar.low, bar.close)
+        return None
+
+    def on_m1(self, bar: Bar) -> Signal | None:
+        if bar.time.date() != self.day:
+            self.day, self.range_hi, self.range_lo, self.done = bar.time.date(), None, None, set()
+        hm = (bar.time.hour, bar.time.minute)
+        r0, r1, until = self._t(self.cfg.lb_range_start), self._t(self.cfg.lb_range_end), self._t(self.cfg.lb_entry_until)
+        if r0 <= hm < r1:
+            self.range_hi = bar.high if self.range_hi is None else max(self.range_hi, bar.high)
+            self.range_lo = bar.low if self.range_lo is None else min(self.range_lo, bar.low)
+            return None
+        if self.range_hi is None or not (r1 <= hm < until):
+            return None
+        rng = (self.range_hi - self.range_lo) / self.pip
+        if not (self.cfg.lb_min_range_pips <= rng <= self.cfg.lb_max_range_pips):
+            return None
+        side = None
+        if bar.close > self.range_hi:
+            side = Side.LONG
+        elif bar.close < self.range_lo:
+            side = Side.SHORT
+        if side is None or not self.allowed(side) or (self.cfg.lb_one_per_direction and side in self.done):
+            return None
+        self.done.add(side)
+        sl = min(self.cfg.lb_sl_pips, rng) * self.pip
+        return Signal(
+            side=side, sl_distance=sl, tp_distance=self.cfg.lb_tp_rr * sl,
+            decided_at=bar.time + timedelta(minutes=1),
+            reason=f"{self.name}: wybicie zakresu {self.range_lo:.5f}-{self.range_hi:.5f} ({rng:.1f} pips)",
+            features={"range_pips": round(rng, 1), "close": bar.close, "range_hi": self.range_hi, "range_lo": self.range_lo},
+        )
+
+
 STRATEGIES = {TrendPullbackStrategy.name: TrendPullbackStrategy, BreakoutStrategy.name: BreakoutStrategy,
-              SwingStrategy.name: SwingStrategy, ScalpMeanRevStrategy.name: ScalpMeanRevStrategy}
+              SwingStrategy.name: SwingStrategy, ScalpMeanRevStrategy.name: ScalpMeanRevStrategy,
+              LondonBreakoutStrategy.name: LondonBreakoutStrategy}
 
 
 def build_strategy(cfg: StrategyConfig, pip_size: float = 0.0001) -> TrendPullbackStrategy:
@@ -263,6 +319,6 @@ def build_strategy(cfg: StrategyConfig, pip_size: float = 0.0001) -> TrendPullba
         cls = STRATEGIES[cfg.name]
     except KeyError:
         raise ValueError(f"Nieznana strategia '{cfg.name}'. Dostępne: {sorted(STRATEGIES)}") from None
-    if cls is ScalpMeanRevStrategy:
+    if cls in (ScalpMeanRevStrategy, LondonBreakoutStrategy):
         return cls(cfg, pip_size)
     return cls(cfg)

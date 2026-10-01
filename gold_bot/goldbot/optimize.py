@@ -35,6 +35,12 @@ GRIDS = {
         "scalp_tp_pips": [2.0, 3.0, 5.0],
         "max_hold_minutes": [15, 45],
     },
+    "london_breakout_v1": {
+        "lb_sl_pips": [6.0, 8.0, 12.0],
+        "lb_tp_rr": [1.0, 1.5, 2.0],
+        "lb_entry_until": ["09:00", "11:00"],
+        "lb_min_range_pips": [5.0, 10.0],
+    },
     "breakout_v1": {
         "sl_atr_mult": [1.0, 1.5, 2.0],
         "tp_atr_mult": [1.5, 2.0, 3.0],

@@ -44,6 +44,15 @@ class StrategyConfig:
     scalp_tp_pips: float = 3.0
     scalp_min_atr_pips: float = 0.5  # martwy rynek = brak wejść
     scalp_max_atr_pips: float = 4.0  # zbyt nerwowy = brak wejść
+    # london_breakout_v1: zakres sesji azjatyckiej [range_start, range_end) UTC, wejście na zamknięciu M1 poza zakresem
+    lb_range_start: str = "00:00"
+    lb_range_end: str = "07:00"
+    lb_entry_until: str = "11:00"  # po tej godzinie wybicie już nie liczy się jako "otwarcie Londynu"
+    lb_min_range_pips: float = 8.0
+    lb_max_range_pips: float = 40.0
+    lb_sl_pips: float = 8.0  # stop = min(lb_sl_pips, zakres) - nie szerzej niż cały zakres
+    lb_tp_rr: float = 1.5  # cel = lb_tp_rr * stop
+    lb_one_per_direction: bool = True
     # swing_v1: wybicie kanału z ostatnich N świec H4 w kierunku trendu H4, trailing stop k*ATR(H4)
     swing_lookback_h4: int = 20
     swing_atr_period_h4: int = 14
